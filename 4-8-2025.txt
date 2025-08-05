@@ -1,0 +1,3 @@
+ALTER TABLE `sanskar`.`users`   
+  DROP INDEX `users_primary_email_unique`,
+  ADD  UNIQUE INDEX `users_primary_email_unique` (`primary_email` ASC, `mobile_number`) VISIBLE;
