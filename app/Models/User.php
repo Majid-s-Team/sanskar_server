@@ -53,5 +53,9 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Activity::class, 'mother_activity_user');
     }
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
 
 }

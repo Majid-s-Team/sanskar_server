@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Stripe Payment Test</title>
+</head>
+<body>
+  <button id="payBtn">Pay Now</button>
+
+  <script src="https://js.stripe.com/v3/"></script>
+  <script>
+    const stripe = Stripe('pk_test_51RtTevD49IzWQBTFZst7l276muggOXPQd2hatN26G5AAWLm9s2t6FOzD8ZqxtrbFxHI1mXgQ0e5O0eGkXueeuo9t00CY3C0L6J'); 
+
+    document.getElementById('payBtn').addEventListener('click', async function () {
+      const userId = 5; 
+      const amount = 1000; 
+
+      const response = await fetch('http://localhost:8000/api/create-stripe-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ user_id: userId, amount: amount })
+      });
+
+      const data = await response.json();
+
+      if (data.url) {
+        window.location.href = data.url; 
+      } else {
+        alert("Error creating payment session.");
+      }
+    });
+  </script>
+</body>
+</html>

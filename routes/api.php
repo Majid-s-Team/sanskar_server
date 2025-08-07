@@ -13,6 +13,7 @@ use App\Http\Controllers\WebAPI\GradeController;
 use App\Http\Controllers\WebAPI\GurukalController;
 use App\Http\Controllers\WebAPI\TeeshirtSizeController;
 use App\Http\Controllers\API\StudentController;
+use App\Http\Controllers\API\PaymentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,6 +32,11 @@ Route::post('forgot-password', [PasswordController::class, 'forgotPassword']);
 Route::post('verify-otp', [PasswordController::class, 'verifyOtp']);
 Route::post('reset-password', [PasswordController::class, 'resetPassword']);
 Route::get('/user/{id}/students', [StudentController::class, 'getMyStudents']);
+Route::post('/make-payment', [PaymentController::class, 'createPayment']);
+Route::get('/payment/callback', [PaymentController::class, 'paymentCallback']);
+Route::post('/stripe/webhook', [PaymentController::class, 'handleStripeWebhook']);
+Route::post('/create-stripe-session', [PaymentController::class, 'createStripeSession']);
+
 
 Route::post('/upload-media', [MediaUploadController::class, 'upload']);
  Route::prefix('activity')->group(function () {
