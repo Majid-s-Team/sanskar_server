@@ -32,7 +32,7 @@ Route::post('verify-otp', [PasswordController::class, 'verifyOtp']);
 Route::post('reset-password', [PasswordController::class, 'resetPassword']);
 Route::get('/user/{id}/students', [StudentController::class, 'getMyStudents']);
 
-Route::post('/upload-media', [MediaUploadController::class, 'upload'])->middleware('auth:sanctum');
+Route::post('/upload-media', [MediaUploadController::class, 'upload']);
  Route::prefix('activity')->group(function () {
     Route::get('/', [ActivityController::class, 'index']);
     Route::post('/', [ActivityController::class, 'store']);
