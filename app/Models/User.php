@@ -32,6 +32,9 @@ class User extends Authenticatable
         'otp',
         'otp_expires_at',
         'is_otp_verified',
+        'profile_image'
+
+
     ];
 
     protected $hidden = ['password', 'remember_token'];

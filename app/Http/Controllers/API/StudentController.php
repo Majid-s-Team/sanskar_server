@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Models\Student;
+use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Traits\ApiResponse;
@@ -121,4 +122,22 @@ class StudentController extends Controller
 
         return $this->success($student, 'Student status updated');
     }
+  public function getMyStudents($id)
+    {
+        $user = User::find($id);
+
+        if (!$user) {
+            return $this->error('User not found', null, 404);
+        }
+
+        $students = $user->students()->with([
+            'teeshirtSize',
+            'gurukal',
+            'schoolGrade'
+        ])->get();
+
+        return $this->success($students, 'Student list fetched successfully');
+    }
+
+
 }

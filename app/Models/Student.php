@@ -26,6 +26,7 @@ class Student extends Model
         'teeshirt_size_id',
         'gurukal_id',
         'school_grade_id',
+        'profile_image'
         // 'address', 'city', 'state', 'zip_code'
     ];
 
