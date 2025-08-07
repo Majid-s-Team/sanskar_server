@@ -36,8 +36,8 @@ class AuthController extends Controller
             'state' => 'nullable|string|max:100',
             'zip_code' => 'nullable|string|max:20',
             'password' => 'required|string|min:6|confirmed',
-            'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'students.*.profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'profile_image' => 'nullable|url',
+
             'students' => 'required|array|min:1',
             'students.*.first_name' => 'required|string|max:255',
             'students.*.last_name' => 'required|string|max:255',
@@ -52,16 +52,12 @@ class AuthController extends Controller
             'students.*.teeshirt_size_id' => 'required|exists:teeshirt_sizes,id',
             'students.*.gurukal_id' => 'required|exists:gurukals,id',
             'students.*.school_grade_id' => 'required|exists:grades,id',
+            'students.*.profile_image' => 'nullable|url',
+
         ]);
 
         DB::beginTransaction();
         try {
-            $userProfileImage = null;
-            if ($request->hasFile('profile_image')) {
-                $file = $request->file('profile_image');
-                $path = $file->store('users', 'public');
-                $userProfileImage = asset('storage/' . $path);
-            }
             $user = User::create([
                 'primary_email' => $validated['primary_email'],
                 'secondary_email' => $validated['secondary_email'] ?? null,
@@ -79,7 +75,8 @@ class AuthController extends Controller
                 'is_active' => true,
                 'is_payment_done' => false,
                 'password' => Hash::make($validated['password']),
-                'profile_image' => $userProfileImage,
+                'profile_image' => $validated['profile_image'] ?? null,
+
             ]);
 
 
@@ -93,18 +90,8 @@ class AuthController extends Controller
             }
 
 
-
-            foreach ($validated['students'] as $index => $studentData) {
-                $studentImage = null;
-                if ($request->hasFile("students.$index.profile_image")) {
-                    $file = $request->file("students.$index.profile_image");
-                    $path = $file->store('students', 'public');
-                    $studentImage = asset('storage/' . $path);
-                }
-
+            foreach ($validated['students'] as $studentData) {
                 $studentData['user_id'] = $user->id;
-                $studentData['profile_image'] = $studentImage;
-
                 Student::create($studentData);
             }
 
