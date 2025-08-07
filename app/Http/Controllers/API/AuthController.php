@@ -122,9 +122,22 @@ class AuthController extends Controller
             return $this->error('Your account is inactive', 403);
         }
 
+        // if (!$user->is_payment_done) {
+        //     return $this->error('Payment not completed. Please complete your payment to proceed.', 403);
+        // }
         if (!$user->is_payment_done) {
-            return $this->error('Payment not completed. Please complete your payment to proceed.', 403);
+            return $this->error(
+                'Payment not completed. Please complete your payment to proceed.',
+                403,
+                [
+                    'id' => $user->id,
+                    'primary_email' => $user->primary_email,
+                    'mobile_number' => $user->mobile_number,
+                    'student_count' => $user->students()->count(), 
+                ]
+            );
         }
+
 
         $token = $user->createToken('API Token')->plainTextToken;
 
