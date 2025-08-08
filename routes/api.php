@@ -32,8 +32,6 @@ Route::post('forgot-password', [PasswordController::class, 'forgotPassword']);
 Route::post('verify-otp', [PasswordController::class, 'verifyOtp']);
 Route::post('reset-password', [PasswordController::class, 'resetPassword']);
 Route::get('/user/{id}/students', [StudentController::class, 'getMyStudents']);
-Route::post('/make-payment', [PaymentController::class, 'createPayment']);
-Route::get('/payment/callback', [PaymentController::class, 'paymentCallback']);
 Route::post('/stripe/webhook', [PaymentController::class, 'handleStripeWebhook']);
 Route::post('/create-stripe-session', [PaymentController::class, 'createStripeSession']);
 
