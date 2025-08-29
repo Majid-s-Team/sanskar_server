@@ -1,6 +1,5 @@
 <?php
 
-// app/Http/Controllers/API/PaymentController.php
 
 namespace App\Http\Controllers\API;
 
@@ -13,102 +12,163 @@ use Illuminate\Support\Facades\DB;
 use Stripe\Stripe;
 use Stripe\Checkout\Session;
 use Stripe\Webhook;
+use Stripe\PaymentIntent;
+use Stripe\PaymentMethod;
+
 class PaymentController extends Controller
 {
 
-    public function createStripeSession(Request $request)
-    {
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'amount' => 'required|numeric|min:1',
-            'currency' => 'required|string|size:3', // e.g. usd, inr, eur
-        ]);
+public function createStripeSession(Request $request)
+{
+    $request->validate([
+        'user_id' => 'required|exists:users,id',
+        'amount' => 'required|numeric|min:0.5',
+        'currency' => 'required|string|size:3',
+    ]);
 
-        $user = User::findOrFail($request->user_id);
+    $user = User::findOrFail($request->user_id);
 
-        Stripe::setApiKey(config('services.stripe.secret'));
 
-        $session = Session::create([
-            'payment_method_types' => ['card'],
-            'line_items' => [
-                [
-                    'price_data' => [
-                        'currency' => strtolower($request->currency),
-                        'product_data' => ['name' => 'Membership Fee'],
-                        'unit_amount' => $request->amount * 100,
-                    ],
-                    'quantity' => 1,
-                ]
+    $unitAmount = (int) round($request->amount);
+
+    Stripe::setApiKey(config('services.stripe.secret'));
+
+    $session = Session::create([
+        'payment_method_types' => ['card'],
+        'line_items' => [[
+            'price_data' => [
+                'currency' => strtolower($request->currency),
+                'product_data' => ['name' => 'Registration Fee'],
+                'unit_amount' => $unitAmount, // in cents
             ],
-            'mode' => 'payment',
-            'success_url' => env('APP_URL') . '/payment/success?session_id={CHECKOUT_SESSION_ID}',
-            'cancel_url' => env('APP_URL') . '/payment/cancel',
-            'metadata' => ['user_id' => $user->id],
-        ]);
+            'quantity' => 1,
+        ]],
+        'mode' => 'payment',
 
-        Payment::create([
-            'user_id' => $user->id,
-            'payment_id' => $session->id,
-            'amount' => $request->amount,
-            'currency' => strtolower($request->currency),
-            'payment_method' => 'stripe',
-            'status' => 'pending',
-        ]);
+        'success_url' => url('/payment/success') . '?session_id={CHECKOUT_SESSION_ID}',
+        // 'success_url' => 'https://sanskar-ruddy.vercel.app/login',
+        // 'cancel_url'  => url('/payment/cancel'),
+        // 'cancel_url'  => url('/payment/cancel'),
+        'cancel_url'  => 'https://sanskaracademy-dev.org/',
+        'metadata' => ['user_id' => $user->id],
+    ]);
 
-        return response()->json(['url' => $session->url]);
-    }
 
-    public function handleStripeWebhook(Request $request)
+    Payment::create([
+        'user_id' => $user->id,
+        'payment_id' => $session->id,
+        'amount' => $unitAmount,   
+        'currency' => strtolower($request->currency),
+        'payment_method' => 'stripe',
+        'status' => 'pending',
+    ]);
+
+    return response()->json(['url' => $session->url]);
+}
+public function success(Request $request)
     {
-        $payload = @file_get_contents("php://input");
-        $sig_header = $_SERVER['HTTP_STRIPE_SIGNATURE'] ?? '';
-        $secret = config('services.stripe.webhook_secret');
+        $sessionId = $request->query('session_id');
 
-        try {
-            $event = Webhook::constructEvent($payload, $sig_header, $secret);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
+        if (!$sessionId) {
+            abort(404, 'Session ID missing.');
         }
 
-        if ($event->type === 'checkout.session.completed') {
-            $session = $event->data->object;
-            $userId = $session->metadata->user_id ?? null;
-            $paymentIntentId = $session->payment_intent;
+Stripe::setApiKey(config('services.stripe.secret'));
+$session = Session::retrieve($sessionId);
 
-            $paymentIntent = \Stripe\PaymentIntent::retrieve($paymentIntentId);
-            $paymentMethod = \Stripe\PaymentMethod::retrieve($paymentIntent->payment_method);
-
-            $payment = Payment::where('payment_id', $session->id)->first();
-            if ($payment) {
-                $payment->update([
-                    'status' => 'completed',
-                    'currency' => $session->currency,
-                    'payment_method' => $paymentMethod->type,
-                    'card_brand' => $paymentMethod->card->brand ?? null,
-                    'card_last4' => $paymentMethod->card->last4 ?? null,
-                    'card_exp_month' => $paymentMethod->card->exp_month ?? null,
-                    'card_exp_year' => $paymentMethod->card->exp_year ?? null,
-                    'billing_name' => $paymentMethod->billing_details->name ?? null,
-                    'billing_email' => $paymentMethod->billing_details->email ?? null,
-                    'billing_country' => $paymentMethod->billing_details->address->country ?? null,
-                    'billing_city' => $paymentMethod->billing_details->address->city ?? null,
-                    'billing_line1' => $paymentMethod->billing_details->address->line1 ?? null,
-                    'billing_postal_code' => $paymentMethod->billing_details->address->postal_code ?? null,
-                ]);
-            }
+        // Optional: verify payment status
+        if ($session->payment_status === 'paid') {
+            return view('success', ['session' => $session]);
         }
 
-        if ($event->type === 'payment_intent.payment_failed') {
-            $intent = $event->data->object;
-            $payment = Payment::where('payment_id', $intent->id)->first();
-            if ($payment) {
-                $payment->update([
-                    'status' => 'failed',
-                    'error_message' => $intent->last_payment_error->message ?? 'Unknown error',
-                ]);
-            }
-        }
-
-        return response()->json(['status' => 'success']);
+        return abort(404, 'Payment not found or not paid.');
     }
+
+    public function cancel()
+    {
+        return view('payment.success');
+    }
+
+   public function handleStripeWebhook(Request $request)
+{
+    \Log::info('Stripe webhook hit', ['headers' => $request->headers->all(), 'payload' => $request->all()]);
+
+    Stripe::setApiKey(config('services.stripe.secret'));
+
+    $payload = $request->getContent();
+    $sig_header = $request->header('Stripe-Signature');
+    $secret = config('services.stripe.webhook_secret');
+
+    try {
+        $event = Webhook::constructEvent($payload, $sig_header, $secret);
+    } catch (\UnexpectedValueException $e) {
+        \Log::error('Invalid payload', ['err' => $e->getMessage()]);
+        return response()->json(['error' => 'Invalid payload'], 400);
+    } catch (\Stripe\Exception\SignatureVerificationException $e) {
+        \Log::error('Invalid signature', ['err' => $e->getMessage()]);
+        return response()->json(['error' => 'Invalid signature'], 400);
+    } catch (\Exception $e) {
+        \Log::error('Webhook error', ['err' => $e->getMessage()]);
+        return response()->json(['error' => $e->getMessage()], 400);
+    }
+
+
+   if ($event->type === 'checkout.session.completed') {
+    $session = $event->data->object;
+    $paymentIntentId = $session->payment_intent ?? null;
+
+    try {
+        if ($paymentIntentId) {
+            $paymentIntent = PaymentIntent::retrieve($paymentIntentId);
+            $paymentMethod = PaymentMethod::retrieve($paymentIntent->payment_method);
+        } else {
+            $paymentIntent = null;
+            $paymentMethod = null;
+        }
+    } catch (\Exception $e) {
+        \Log::warning('Failed to retrieve paymentIntent/paymentMethod', ['err' => $e->getMessage()]);
+        $paymentIntent = null;
+        $paymentMethod = null;
+    }
+
+    $payment = Payment::where('payment_id', $session->id)->first();
+    if ($payment) {
+        $payment->update([
+            'status' => 'completed',
+            'currency' => $session->currency ?? $payment->currency,
+            'payment_method' => $paymentMethod->type ?? $payment->payment_method,
+            'card_brand' => $paymentMethod->card->brand ?? $payment->card_brand ?? null,
+            'card_last4' => $paymentMethod->card->last4 ?? $payment->card_last4 ?? null,
+            'card_exp_month' => $paymentMethod->card->exp_month ?? $payment->card_exp_month ?? null,
+            'card_exp_year' => $paymentMethod->card->exp_year ?? $payment->card_exp_year ?? null,
+            'billing_name' => $paymentMethod->billing_details->name ?? $payment->billing_name ?? null,
+            'billing_email' => $paymentMethod->billing_details->email ?? $payment->billing_email ?? null,
+            'billing_country' => $paymentMethod->billing_details->address->country ?? $payment->billing_country ?? null,
+            'billing_city' => $paymentMethod->billing_details->address->city ?? $payment->billing_city ?? null,
+            'billing_line1' => $paymentMethod->billing_details->address->line1 ?? $payment->billing_line1 ?? null,
+            'billing_postal_code' => $paymentMethod->billing_details->address->postal_code ?? $payment->billing_postal_code ?? null,
+        ]);
+
+        $user = User::find($payment->user_id);
+        if ($user) {
+            $user->update(['is_payment_done' => 1]);
+        }
+    } else {
+        \Log::warning('Payment DB record not found for session', ['session_id' => $session->id]);
+    }
+}
+
+    if ($event->type === 'payment_intent.payment_failed') {
+        $intent = $event->data->object;
+        $payment = Payment::where('payment_id', $intent->id)->first();
+        if ($payment) {
+            $payment->update([
+                'status' => 'failed',
+                'error_message' => $intent->last_payment_error->message ?? 'Unknown error',
+            ]);
+        }
+    }
+
+    return response()->json(['status' => 'success'], 200);
+}
 }

@@ -20,7 +20,7 @@ class AuthController extends Controller
         $validated = $request->validate([
             'primary_email' => 'required|email|unique:users,primary_email',
             'secondary_email' => 'nullable|email',
-            'mobile_number' => 'required|string|max:20',
+            'mobile_number' => 'required|unique:users,mobile_number|string|max:20',
             'secondary_mobile_number' => 'nullable|string|max:20',
             'father_name' => 'required|string|max:255',
             'mother_name' => 'required|string|max:255',
