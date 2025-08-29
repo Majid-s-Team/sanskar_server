@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\DB;
 
 class ProfileController extends Controller
 {
@@ -46,4 +48,80 @@ class ProfileController extends Controller
 
         return $this->success($user->fresh(), 'Profile updated successfully');
     }
+
+     public function getUserPdf()
+    {
+        $data = DB::table('users')
+            ->select(
+                'users.primary_email as primary_email',
+                'users.mobile_number as primary_mobile_number',
+                'users.father_name as father_full_name',
+                'users.mother_name as mother_full_name',
+                DB::raw("CONCAT(students.first_name, ' ', students.last_name) as student_name"),
+                'students.student_email as student_email',
+                'students.student_mobile_number as student_mobile_number',
+                DB::raw("CONCAT(users.city, ', ', users.state) as address"),
+                DB::raw("SUM(payments.amount) as total_payment"),
+                'payments.currency as currency'
+            )
+            ->join('students', 'users.id', '=', 'students.user_id')
+            ->join('payments', 'payments.user_id', '=', 'users.id')
+            ->where('users.is_payment_done', '=', '1')
+            ->groupBy(
+                'users.primary_email',
+                'users.mobile_number',
+                'users.father_name',
+                'users.mother_name',
+                'students.first_name',
+                'students.last_name',
+                'students.student_email',
+                'students.student_mobile_number',
+                'users.city',
+                'users.state',
+                'payments.currency'
+            )
+            ->orderBy('users.id')
+            ->get();
+
+        // Build raw HTML string for the PDF
+        $html = '<h2>Student Report</h2>';
+        $html .= '<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">';
+        $html .= '<thead><tr>
+                    <th>Primary Email</th>
+                    <th>Primary Mobile Number</th>
+                    <th>Father Full Name</th>
+                    <th>Mother Full Name</th>
+                    <th>Student Name</th>
+                    <th>Student Email</th>
+                    <th>Student Mobile Number</th>
+                    <th>Address</th>
+                    <th>Total Payment</th>
+                    <th>Currency</th>
+                  </tr></thead><tbody>';
+
+        foreach ($data as $row) {
+            $html .= '<tr>';
+            $html .= '<td>' . htmlspecialchars($row->primary_email) . '</td>';
+            $html .= '<td>' . htmlspecialchars($row->primary_mobile_number) . '</td>';
+            $html .= '<td>' . htmlspecialchars($row->father_full_name) . '</td>';
+            $html .= '<td>' . htmlspecialchars($row->mother_full_name) . '</td>';
+            $html .= '<td>' . htmlspecialchars($row->student_name) . '</td>';
+            $html .= '<td>' . htmlspecialchars($row->student_email) . '</td>';
+            $html .= '<td>' . htmlspecialchars($row->student_mobile_number) . '</td>';
+            $html .= '<td>' . htmlspecialchars($row->address) . '</td>';
+            $html .= '<td>' . htmlspecialchars($row->total_payment) . '</td>';
+            $html .= '<td>' . htmlspecialchars($row->currency) . '</td>';
+            $html .= '</tr>';
+        }
+
+        $html .= '</tbody></table>';
+
+        // Generate PDF from HTML string
+        $pdf = Pdf::loadHTML($html)->setPaper('tabloid', 'landscape');
+
+        // Return PDF as download response
+        return $pdf->download('Student Report.pdf');
+    }
+
+
 }

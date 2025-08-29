@@ -34,6 +34,7 @@ Route::post('reset-password', [PasswordController::class, 'resetPassword']);
 Route::get('/user/{id}/students', [StudentController::class, 'getMyStudents']);
 Route::post('/stripe/webhook', [PaymentController::class, 'handleStripeWebhook']);
 Route::post('/create-stripe-session', [PaymentController::class, 'createStripeSession']);
+Route::get('/getDataPdf',[ProfileController::class,'getUserPdf']);
 
 
 Route::post('/upload-media', [MediaUploadController::class, 'upload']);
@@ -100,6 +101,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Route::post('assign-permission/{userId}', [PermissionController::class, 'assignPermission']);
     // Route::post('assign-multiple-permissions/{userId}', [PermissionController::class, 'assignMultiplePermissions']);
 
-   
+
 });
 
