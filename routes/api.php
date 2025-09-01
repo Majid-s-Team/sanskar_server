@@ -85,7 +85,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('change-password', [PasswordController::class, 'changePassword']);
     Route::get('profile', [ProfileController::class, 'view']);
     Route::post('profile-update', [ProfileController::class, 'update']);
-    Route::get('getDataPdf',[ProfileController::class,'getUserPdf']);
+    Route::post('getDataPdf',[ProfileController::class,'getUserPdf']);
+    Route::get('all-profiles', [ProfileController::class, 'viewAll']);
+
 
 
 
