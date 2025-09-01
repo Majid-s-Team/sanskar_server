@@ -88,6 +88,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('getDataPdf',[ProfileController::class,'getUserPdf']);
 
 
+
     // Route::get('roles', [RoleController::class, 'index']);
     // Route::post('roles', [RoleController::class, 'store']);
     // Route::delete('roles/{id}', [RoleController::class, 'destroy']);
