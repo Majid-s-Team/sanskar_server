@@ -3,15 +3,17 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
-use Illuminate\Support\Facades\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
-use Maatwebsite\Excel\Concerns\FromArray;
+use App\Exports\UserReportExport;
+use Illuminate\Pagination\Paginator;
+
+
 
 
 
@@ -55,87 +57,134 @@ class ProfileController extends Controller
         return $this->success($user->fresh(), 'Profile updated successfully');
     }
 
-public function getUserPdf()
-{
-    // Fetch data from DB
-    $data = DB::table('users')
-        ->select(
-            'users.primary_email as primary_email',
-            'users.mobile_number as primary_mobile_number',
-            'users.father_name as father_full_name',
-            'users.mother_name as mother_full_name',
-            DB::raw("CONCAT(students.first_name, ' ', students.last_name) as student_name"),
-            'students.student_email as student_email',
-            'students.student_mobile_number as student_mobile_number',
-            DB::raw("CONCAT(users.city, ', ', users.state) as address"),
-            DB::raw("SUM(payments.amount) as total_payment"),
-            'payments.currency as currency'
-        )
-        ->join('students', 'users.id', '=', 'students.user_id')
-        ->join('payments', 'payments.user_id', '=', 'users.id')
-        ->where('payments.status', '=', 'completed')
-        ->where('users.is_payment_done', '=', '1')
-        ->groupBy(
-            'users.primary_email',
-            'users.mobile_number',
-            'users.father_name',
-            'users.mother_name',
-            'students.first_name',
-            'students.last_name',
-            'students.student_email',
-            'students.student_mobile_number',
-            'users.city',
-            'users.state',
-            'payments.currency'
-        )
-        ->orderBy('users.id')
-        ->offset(2)
-        ->limit(1000)
-        ->get();
+  public function getUserPdf(Request $request)
+    {
+        $key = $request->input('key', 'pdf'); // default: pdf
 
-    // Add serial numbers
-    $data = $data->map(function ($item, $index) {
-        $item->serial_number = $index + 1;
-        return $item;
-    });
+        // Validate format
+        if (!in_array($key, ['pdf', 'xlsx', 'csv'])) {
+            return response()->json(['error' => 'Invalid format. Allowed: pdf, xlsx, csv'], 422);
+        }
 
-    // Build HTML for PDF
-    $html = '<h2>Student Report</h2>';
-    $html .= '<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">';
-    $html .= '<thead><tr>
-        <th>S.No </th>
-        <th>Primary Email</th>
-        <th>Primary Mobile Number</th>
-        <th>Father Full Name</th>
-        <th>Mother Full Name</th>
-        <th>Student Name</th>
-        <th>Student Email</th>
-        <th>Student Mobile Number</th>
-        <th>Address</th>
-        <th>Total Payment</th>
-        <th>Currency</th>
-    </tr></thead><tbody>';
+        // Fetch data
+        $data = DB::table('users')
+            ->select(
+                'users.primary_email',
+                'users.mobile_number',
+                'users.father_name',
+                'users.mother_name',
+                DB::raw("CONCAT(students.first_name, ' ', students.last_name) as student_name"),
+                'students.student_email',
+                'students.student_mobile_number',
+                DB::raw("CONCAT(users.city, ', ', users.state) as address"),
+                DB::raw("SUM(payments.amount) as total_payment"),
+                'payments.currency'
+            )
+            ->join('students', 'users.id', '=', 'students.user_id')
+            ->join('payments', 'payments.user_id', '=', 'users.id')
+            ->where('payments.status', '=', 'completed')
+            ->where('users.is_payment_done', '=', '1')
+            ->groupBy(
+                'users.primary_email',
+                'users.mobile_number',
+                'users.father_name',
+                'users.mother_name',
+                'students.first_name',
+                'students.last_name',
+                'students.student_email',
+                'students.student_mobile_number',
+                'users.city',
+                'users.state',
+                'payments.currency'
+            )
+            ->orderBy('users.id')
+            ->offset(2)
+            ->limit(1000)
+            ->get();
 
-    foreach ($data as $row) {
-        $html .= '<tr>';
-        $html .= '<td>' . htmlspecialchars($row->serial_number) . '</td>';
-        $html .= '<td>' . htmlspecialchars($row->primary_email) . '</td>';
-        $html .= '<td>' . htmlspecialchars($row->primary_mobile_number) . '</td>';
-        $html .= '<td>' . htmlspecialchars($row->father_full_name) . '</td>';
-        $html .= '<td>' . htmlspecialchars($row->mother_full_name) . '</td>';
-        $html .= '<td>' . htmlspecialchars($row->student_name) . '</td>';
-        $html .= '<td>' . htmlspecialchars($row->student_email) . '</td>';
-        $html .= '<td>' . htmlspecialchars($row->student_mobile_number) . '</td>';
-        $html .= '<td>' . htmlspecialchars($row->address) . '</td>';
-        $html .= '<td>' . htmlspecialchars($row->total_payment) . '</td>';
-        $html .= '<td>' . htmlspecialchars($row->currency) . '</td>';
-        $html .= '</tr>';
+        // Format data
+        $formatted = $data->map(function ($item, $index) {
+            return [
+                'S.No' => $index + 1,
+                'Primary Email' => $item->primary_email,
+                'Primary Mobile Number' => $item->mobile_number,
+                'Father Full Name' => $item->father_name,
+                'Mother Full Name' => $item->mother_name,
+                'Student Name' => $item->student_name,
+                'Student Email' => $item->student_email,
+                'Student Mobile Number' => $item->student_mobile_number,
+                'Address' => $item->address,
+                'Total Payment' => $item->total_payment,
+                'Currency' => $item->currency,
+            ];
+        })->toArray();
+
+        $filename = 'Student_Report_' . now()->format('Ymd_His');
+
+        // Excel or CSV
+        if (in_array($key, ['xlsx', 'csv'])) {
+            return Excel::download(new UserReportExport($formatted), $filename . '.' . $key);
+        }
+
+        // PDF — generate HTML directly (no view)
+        $html = '<h2>Student Report</h2>';
+        $html .= '<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%; font-size: 10px;">';
+        $html .= '<thead><tr>
+            <th>S.No</th>
+            <th>Primary Email</th>
+            <th>Primary Mobile</th>
+            <th>Father Name</th>
+            <th>Mother Name</th>
+            <th>Student Name</th>
+            <th>Student Email</th>
+            <th>Student Mobile</th>
+            <th>Address</th>
+            <th>Total Payment</th>
+            <th>Currency</th>
+        </tr></thead><tbody>';
+
+        foreach ($formatted as $row) {
+            $html .= '<tr>';
+            foreach ($row as $cell) {
+                $html .= '<td>' . htmlspecialchars($cell) . '</td>';
+            }
+            $html .= '</tr>';
+        }
+
+        $html .= '</tbody></table>';
+
+        return Pdf::loadHTML($html)->setPaper('a3', 'landscape')->download($filename . '.pdf');
     }
 
-    $html .= '</tbody></table>';
+public function viewAll(Request $request)
+{
+    $request->validate([
+        'per_page' => 'sometimes|integer|min:1|max:100',
+        'page' => 'sometimes|integer|min:1',
+    ]);
 
-$pdf = Pdf::loadHTML($html)->setPaper('a2', 'landscape');
-    return $pdf->download('Student_Report_' . now()->format('Ymd_His') . '.pdf');
+    $perPage = $request->input('per_page', 10);
+    $page = $request->input('page', 1);
+
+    Paginator::currentPageResolver(function () use ($page) {
+        return $page;
+    });
+
+    $users = User::with(['students', 'fatherActivities', 'motherActivities'])
+        ->orderBy('id', 'asc')
+        ->paginate($perPage);
+
+    return $this->success([
+        'users' => $users->items(),
+        'current_page' => $users->currentPage(),
+        'per_page' => $users->perPage(),
+        'has_next_page' => $users->hasMorePages(),
+        'has_previous_page' => $users->currentPage() > 1,
+        'last_page' => $users->lastPage(),
+        'total' => $users->total(),
+    ], 'Paginated users fetched');
 }
+
+
 
 }
