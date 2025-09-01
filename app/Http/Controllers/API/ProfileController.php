@@ -182,7 +182,7 @@ public function viewAll(Request $request)
         'has_previous_page' => $users->currentPage() > 1,
         'last_page' => $users->lastPage(),
         'total' => $users->total(),
-    ], 'Paginated users fetched');
+    ], 'User Fetched Successfully');
 }
 
 
