@@ -29,7 +29,7 @@ public function createStripeSession(Request $request)
     $user = User::findOrFail($request->user_id);
 
 
-    $unitAmount = (int) round($request->amount);
+    $unitAmount = (int) round($request->amount * 100);
 
     Stripe::setApiKey(config('services.stripe.secret'));
 
@@ -57,7 +57,7 @@ public function createStripeSession(Request $request)
     Payment::create([
         'user_id' => $user->id,
         'payment_id' => $session->id,
-        'amount' => $unitAmount,   
+        'amount' => $unitAmount,
         'currency' => strtolower($request->currency),
         'payment_method' => 'stripe',
         'status' => 'pending',
