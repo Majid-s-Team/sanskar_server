@@ -10,13 +10,16 @@ class Controller extends BaseController
 {
     use AuthorizesRequests, ValidatesRequests;
 
-    protected function paginateUsers($perPage = 10)
-{
-    $users = User::with(['students', 'fatherActivities', 'motherActivities'])
-        ->orderBy('id', 'asc')
-        ->paginate($perPage);
 
-   return $this->success($users, 'Paginated users fetched');
+public function paginate($paginator)
+{
+    return [
+        'count' => $paginator->total(),
+        'pageCount' => (int) ceil($paginator->total() / $paginator->perPage()),
+        'perPage' => (int) $paginator->perPage(),
+        'currentPage' => (int) $paginator->currentPage(),
+    ];
 }
+
 
 }

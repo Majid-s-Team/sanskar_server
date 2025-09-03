@@ -156,7 +156,7 @@ class ProfileController extends Controller
         return Pdf::loadHTML($html)->setPaper('a3', 'landscape')->download($filename . '.pdf');
     }
 
-public function viewAll(Request $request)
+   public function viewAll(Request $request)
 {
     $request->validate([
         'per_page' => 'sometimes|integer|min:1|max:100',
@@ -176,13 +176,8 @@ public function viewAll(Request $request)
 
     return $this->success([
         'users' => $users->items(),
-        'current_page' => $users->currentPage(),
-        'per_page' => $users->perPage(),
-        'has_next_page' => $users->hasMorePages(),
-        'has_previous_page' => $users->currentPage() > 1,
-        'last_page' => $users->lastPage(),
-        'total' => $users->total(),
-    ], 'User Fetched Successfully');
+        'pagination' => $this->paginate($users),
+    ], 'Users Fetched Successfully');
 }
 
 
