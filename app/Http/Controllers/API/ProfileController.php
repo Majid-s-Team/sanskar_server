@@ -170,7 +170,8 @@ class ProfileController extends Controller
         return $page;
     });
 
-    $users = User::with(['students', 'fatherActivities', 'motherActivities'])
+    $users = User::with(['students', 'fatherActivities', 'motherActivities'])->where('is_payment_done', 1)
+        ->Where('is_otp_verified',0)
         ->orderBy('id', 'asc')
         ->paginate($perPage);
 

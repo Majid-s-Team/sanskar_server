@@ -143,6 +143,7 @@ class AuthController extends Controller
 
         return $this->success([
             'user' => $user->load('students', 'fatherActivities', 'motherActivities'),
+            'roles' => $user->getRoleNames(),
             'token' => $token,
         ], 'Login successful');
     }

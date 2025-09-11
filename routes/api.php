@@ -45,6 +45,7 @@ Route::post('/upload-media', [MediaUploadController::class, 'upload']);
     Route::delete('/{id}', [ActivityController::class, 'destroy']);
     Route::patch('/{id}/status', [ActivityController::class, 'changeStatus']);
 });
+    Route::post('assign-role/{userId}', [PermissionController::class, 'assignRole']);
 
 Route::prefix('grade')->group(function () {
     Route::get('/', action: [GradeController::class, 'index']);
@@ -91,8 +92,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
 
-    // Route::get('roles', [RoleController::class, 'index']);
-    // Route::post('roles', [RoleController::class, 'store']);
+    Route::get('roles', [RoleController::class, 'index']);
+    Route::post('roles', [RoleController::class, 'store']);
     // Route::delete('roles/{id}', [RoleController::class, 'destroy']);
 
     // // Permission management
@@ -101,7 +102,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Route::delete('permissions/{id}', [PermissionController::class, 'destroy']);
 
     // // Assign role/permission to user
-    // Route::post('assign-role/{userId}', [PermissionController::class, 'assignRole']);
     // Route::post('assign-permission/{userId}', [PermissionController::class, 'assignPermission']);
     // Route::post('assign-multiple-permissions/{userId}', [PermissionController::class, 'assignMultiplePermissions']);
 
