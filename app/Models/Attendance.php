@@ -11,6 +11,8 @@ class Attendance extends Model
         'teacher_id',
         'attendance_date',
         'status',
+        'participation_points',
+        'homework_points',
     ];
 
     const STATUSES = [
@@ -19,6 +21,8 @@ class Attendance extends Model
         'excused_absence' => 'Excused Absence',
         'unexcused_absence' => 'Unexcused Absence',
     ];
+
+    const MAX_POINTS = 3;
 
     public function student()
     {

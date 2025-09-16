@@ -59,6 +59,8 @@ class TeacherController extends Controller
             'gurukal_id' => $request->gurukal_id,
             'profile_picture' => $request->profile_picture,
         ]);
+        $teacher = Teacher::with(['user', 'gurukal'])->find($teacher->id);
+
 
         return $this->success($teacher, 'Teacher created successfully', 201);
     }
@@ -94,6 +96,7 @@ class TeacherController extends Controller
             'phone_number' => 'nullable|string',
             'gurukal_id' => 'nullable|exists:gurukals,id',
             'profile_picture' => 'nullable|string',
+
         ]);
 
         if ($validator->fails()) {
@@ -105,6 +108,8 @@ class TeacherController extends Controller
             'mobile_number' => $request->phone_number ?? $user->mobile_number,
             'profile_image' => $request->profile_picture ?? $user->profile_image,
             'password' => $request->password ? Hash::make($request->password) : $user->password,
+            'is_active' => $request->is_active ?? $user->is_active,
+
         ]);
 
         $teacher->update([
@@ -113,6 +118,8 @@ class TeacherController extends Controller
             'gurukal_id' => $request->gurukal_id ?? $teacher->gurukal_id,
             'profile_picture' => $request->profile_picture ?? $teacher->profile_picture,
         ]);
+        $teacher = Teacher::with(['user', 'gurukal'])->find($teacher->id);
+
 
         return $this->success($teacher, 'Teacher updated successfully');
     }
@@ -143,7 +150,6 @@ class TeacherController extends Controller
     {
         $teacher = Teacher::findOrFail($teacherId);
 
-        // perPage frontend se aye to use karo, warna 10 by default
         $perPage = $request->get('per_page', 10);
 
         $students = Student::where('gurukal_id', $teacher->gurukal_id)
@@ -165,7 +171,10 @@ class TeacherController extends Controller
             'attendance' => 'required|array',
             'attendance.*.student_id' => 'required|exists:students,id',
             'attendance.*.status' => 'required|in:not_recorded,present,excused_absence,unexcused_absence',
+            'attendance.*.participation_points' => 'nullable|integer|min:0|max:3',
+            'attendance.*.homework_points' => 'nullable|integer|min:0|max:3',
         ]);
+
 
         $teacher = Teacher::findOrFail($id);
 
@@ -188,8 +197,11 @@ class TeacherController extends Controller
                 [
                     'teacher_id' => $id,
                     'status' => $att['status'],
+                    'participation_points' => $att['participation_points'] ?? 0,
+                    'homework_points' => $att['homework_points'] ?? 0,
                 ]
             );
+
 
             $results[] = $attendance;
         }
@@ -200,81 +212,134 @@ class TeacherController extends Controller
             'records' => $results,
         ]);
     }
-    public function getAttendances(Request $request, $id)
-    {
-        $teacher = Teacher::with('gurukal')->findOrFail($id);
+    // public function getAttendances(Request $request, $id)
+    // {
+    //     $teacher = Teacher::with('gurukal')->findOrFail($id);
 
 
-        $students = Student::where('gurukal_id', $teacher->gurukal_id)->get();
+    //     $students = Student::where('gurukal_id', $teacher->gurukal_id)->get();
 
-        $query = Attendance::with('student')
-            ->where('teacher_id', $teacher->id);
-
-
-        if ($request->has('date')) {
-            $query->whereDate('attendance_date', $request->date);
-        }
+    //     $query = Attendance::with('student')
+    //         ->where('teacher_id', $teacher->id);
 
 
-        if ($request->has('start_date') && $request->has('end_date')) {
-            $query->whereBetween('attendance_date', [$request->start_date, $request->end_date]);
-        }
+    //     if ($request->has('date')) {
+    //         $query->whereDate('attendance_date', $request->date);
+    //     }
 
 
-        $attendances = $query->orderBy('attendance_date', 'desc')->paginate(10);
+    //     if ($request->has('start_date') && $request->has('end_date')) {
+    //         $query->whereBetween('attendance_date', [$request->start_date, $request->end_date]);
+    //     }
 
-        $counts = [
-            'total_students' => $students->count(),
-            'total_days_marked' => Attendance::where('teacher_id', $teacher->id)
-                ->distinct('attendance_date')
-                ->count('attendance_date'),
-            'present' => $query->clone()->where('status', 'present')->count(),
-            'excused_absence' => $query->clone()->where('status', 'excused_absence')->count(),
-            'unexcused_absence' => $query->clone()->where('status', 'unexcused_absence')->count(),
-            'not_recorded' => $query->clone()->where('status', 'not_recorded')->count(),
+
+    //     $attendances = $query->orderBy('attendance_date', 'desc')->paginate(10);
+
+    //     $counts = [
+    //         'total_students' => $students->count(),
+    //         'total_days_marked' => Attendance::where('teacher_id', $teacher->id)
+    //             ->distinct('attendance_date')
+    //             ->count('attendance_date'),
+    //         'present' => $query->clone()->where('status', 'present')->count(),
+    //         'excused_absence' => $query->clone()->where('status', 'excused_absence')->count(),
+    //         'unexcused_absence' => $query->clone()->where('status', 'unexcused_absence')->count(),
+    //         'not_recorded' => $query->clone()->where('status', 'not_recorded')->count(),
+    //     ];
+
+
+    //     $recorded = $attendances->filter(fn($a) => $a->status !== 'not_recorded')->values();
+    //     $notRecorded = $attendances->filter(fn($a) => $a->status === 'not_recorded')->values();
+
+
+    //     $defaultDate = $request->date ?? now()->toDateString();
+    //     $default = $students->map(function ($student) use ($teacher, $defaultDate) {
+    //         $attendance = Attendance::where('teacher_id', $teacher->id)
+    //             ->where('student_id', $student->id)
+    //             ->whereDate('attendance_date', $defaultDate)
+    //             ->first();
+
+    //         return [
+    //             'student_id' => $student->id,
+    //             'student_name' => $student->first_name . ' ' . $student->last_name,
+    //             'status' => $attendance->status ?? 'not_recorded',
+    //         ];
+    //     });
+
+    //     return response()->json([
+    //         'status' => true,
+    //         'teacher_id' => $teacher->id,
+    //         'filters' => [
+    //             'date' => $request->date ?? null,
+    //             'start_date' => $request->start_date ?? null,
+    //             'end_date' => $request->end_date ?? null,
+    //         ],
+    //         'counts' => $counts,
+    //         'pagination' => [
+    //             'current_page' => $attendances->currentPage(),
+    //             'last_page' => $attendances->lastPage(),
+    //             'per_page' => $attendances->perPage(),
+    //             'total' => $attendances->total(),
+    //         ],
+    //         'arrays' => [
+    //             'all' => $default,
+    //             'recorded' => $recorded,
+    //             'not_recorded' => $notRecorded,
+    //         ],
+    //     ]);
+    // }
+public function getAttendances(Request $request, $id)
+{
+    $teacher = Teacher::with('gurukal')->findOrFail($id);
+
+    $students = Student::where('gurukal_id', $teacher->gurukal_id)->get();
+
+    // jo date pass hui hai usko target karo, warna aaj ka
+    $defaultDate = $request->date ?? now()->toDateString();
+
+    // saare students ke against attendance fetch karo
+    $records = $students->map(function ($student) use ($teacher, $defaultDate) {
+        $attendance = Attendance::where('teacher_id', $teacher->id)
+            ->where('student_id', $student->id)
+            ->whereDate('attendance_date', $defaultDate)
+            ->first();
+
+        return [
+            'student_id'   => $student->id,
+            'student_name' => $student->first_name . ' ' . $student->last_name,
+            'status'       => $attendance->status ?? 'not_recorded',
+            'date'         => $defaultDate,
+            'participation_points' => $attendance->participation_points ?? 0,
+            'homework_points'      => $attendance->homework_points ?? 0,
         ];
+    });
 
+    // recorded / not_recorded split
+    $recorded    = $records->filter(fn($r) => $r['status'] !== 'not_recorded')->values();
+    $notRecorded = $records->filter(fn($r) => $r['status'] === 'not_recorded')->values();
 
-        $recorded = $attendances->filter(fn($a) => $a->status !== 'not_recorded')->values();
-        $notRecorded = $attendances->filter(fn($a) => $a->status === 'not_recorded')->values();
+    // counts
+    $counts = [
+        'total_students'   => $students->count(),
+        'present'          => $recorded->where('status', 'present')->count(),
+        'excused_absence'  => $recorded->where('status', 'excused_absence')->count(),
+        'unexcused_absence'=> $recorded->where('status', 'unexcused_absence')->count(),
+        'not_recorded'     => $notRecorded->count(),
+    ];
 
-
-        $defaultDate = $request->date ?? now()->toDateString();
-        $default = $students->map(function ($student) use ($teacher, $defaultDate) {
-            $attendance = Attendance::where('teacher_id', $teacher->id)
-                ->where('student_id', $student->id)
-                ->whereDate('attendance_date', $defaultDate)
-                ->first();
-
-            return [
-                'student_id' => $student->id,
-                'student_name' => $student->first_name . ' ' . $student->last_name,
-                'status' => $attendance->status ?? 'not_recorded',
-            ];
-        });
-
-        return response()->json([
-            'status' => true,
-            'teacher_id' => $teacher->id,
-            'filters' => [
-                'date' => $request->date ?? null,
-                'start_date' => $request->start_date ?? null,
-                'end_date' => $request->end_date ?? null,
-            ],
-            'counts' => $counts,
-            'pagination' => [
-                'current_page' => $attendances->currentPage(),
-                'last_page' => $attendances->lastPage(),
-                'per_page' => $attendances->perPage(),
-                'total' => $attendances->total(),
-            ],
-            'arrays' => [
-                'all' => $default,       
-                'recorded' => $recorded, 
-                'not_recorded' => $notRecorded, 
-            ],
-        ]);
-    }
+    return response()->json([
+        'status'     => true,
+        'teacher_id' => $teacher->id,
+        'filters'    => [
+            'date' => $defaultDate,
+        ],
+        'counts'     => $counts,
+        'arrays'     => [
+            'all'          => $records,
+            'recorded'     => $recorded,
+            'not_recorded' => $notRecorded,
+        ],
+    ]);
+}
 
 
 
