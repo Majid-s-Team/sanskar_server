@@ -14,6 +14,7 @@ use App\Http\Controllers\WebAPI\GurukalController;
 use App\Http\Controllers\WebAPI\TeeshirtSizeController;
 use App\Http\Controllers\API\StudentController;
 use App\Http\Controllers\API\PaymentController;
+use App\Http\Controllers\API\TeacherController;
 
 /*
 |--------------------------------------------------------------------------
@@ -86,14 +87,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('change-password', [PasswordController::class, 'changePassword']);
     Route::get('profile', [ProfileController::class, 'view']);
     Route::post('profile-update', [ProfileController::class, 'update']);
-
-
-
-
-
-
     Route::get('roles', [RoleController::class, 'index']);
     Route::post('roles', [RoleController::class, 'store']);
+    Route::apiResource('teachers', TeacherController::class);
+    Route::get('teachers/{id}/students', [TeacherController::class, 'getStudents']);
+    Route::post('teacher/{id}/attendance', [TeacherController::class, 'markAttendance']);
+    Route::get('attendance/statuses', [TeacherController::class, 'getStatuses']);
+    Route::get('teacher/{id}/attendances', [TeacherController::class, 'getAttendances']);
+
+
     // Route::delete('roles/{id}', [RoleController::class, 'destroy']);
 
     // // Permission management

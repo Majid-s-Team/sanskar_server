@@ -76,6 +76,7 @@ class AuthController extends Controller
                 'is_payment_done' => false,
                 'password' => Hash::make($validated['password']),
                 'profile_image' => $validated['profile_image'] ?? null,
+                'role' => 'user',
 
             ]);
 
@@ -125,7 +126,19 @@ class AuthController extends Controller
         // if (!$user->is_payment_done) {
         //     return $this->error('Payment not completed. Please complete your payment to proceed.', 403);
         // }
-        if (!$user->is_payment_done) {
+        // if (!$user->is_payment_done) {
+        //     return $this->error(
+        //         'Payment not completed. Please complete your payment to proceed.',
+        //         403,
+        //         [
+        //             'id' => $user->id,
+        //             'primary_email' => $user->primary_email,
+        //             'mobile_number' => $user->mobile_number,
+        //             'student_count' => $user->students()->count(), 
+        //         ]
+        //     );
+        // }
+           if ($user->hasRole('user') && !$user->is_payment_done) {
             return $this->error(
                 'Payment not completed. Please complete your payment to proceed.',
                 403,
@@ -137,6 +150,7 @@ class AuthController extends Controller
                 ]
             );
         }
+
 
 
         $token = $user->createToken('API Token')->plainTextToken;
