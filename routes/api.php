@@ -16,6 +16,7 @@ use App\Http\Controllers\API\StudentController;
 use App\Http\Controllers\API\PaymentController;
 use App\Http\Controllers\API\TeacherController;
 use App\Http\Controllers\API\WeeklyUpdateController;
+use App\Http\Controllers\API\AnnouncementController;
 
 /*
 |--------------------------------------------------------------------------
@@ -113,7 +114,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('teacher/{id}/attendance', [TeacherController::class, 'markAttendance']);
     Route::get('attendance/statuses', [TeacherController::class, 'getStatuses']);
     Route::get('teacher/{id}/attendances', [TeacherController::class, 'getAttendances']);
-    
+   
+      Route::get('/announcements', [AnnouncementController::class, 'index']);
+    Route::get('/announcements/{id}', [AnnouncementController::class, 'show']);
+    Route::post('/announcements', [AnnouncementController::class, 'store']);
+    Route::put('/announcements/{id}', [AnnouncementController::class, 'update']);
+    Route::delete('/announcements/{id}', [AnnouncementController::class, 'destroy']);
+        Route::get('/annoucement-student', [AnnouncementController::class, 'forStudents']);
+
 
     // Route::delete('roles/{id}', [RoleController::class, 'destroy']);
 
