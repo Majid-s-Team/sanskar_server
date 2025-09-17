@@ -305,7 +305,11 @@ class TeacherController extends Controller
     // }
 public function getAttendances(Request $request, $id)
 {
-    $teacher = Teacher::with('gurukal')->findOrFail($id);
+    $teacher = Teacher::with('gurukal')->find($id);
+
+    if (!$teacher) {
+        return $this->error('Teacher not found', 404);
+    }
 
     $students = Student::where('gurukal_id', $teacher->gurukal_id)->get();
 
@@ -320,10 +324,10 @@ public function getAttendances(Request $request, $id)
             ->first();
 
         return [
-            'student_id'   => $student->id,
-            'student_name' => $student->first_name . ' ' . $student->last_name,
-            'status'       => $attendance->status ?? 'not_recorded',
-            'date'         => $defaultDate,
+            'student_id'           => $student->id,
+            'student_name'         => $student->first_name . ' ' . $student->last_name,
+            'status'               => $attendance->status ?? 'not_recorded',
+            'date'                 => $defaultDate,
             'participation_points' => $attendance->participation_points ?? 0,
             'homework_points'      => $attendance->homework_points ?? 0,
         ];
@@ -335,15 +339,14 @@ public function getAttendances(Request $request, $id)
 
     // counts
     $counts = [
-        'total_students'   => $students->count(),
-        'present'          => $recorded->where('status', 'present')->count(),
-        'excused_absence'  => $recorded->where('status', 'excused_absence')->count(),
-        'unexcused_absence'=> $recorded->where('status', 'unexcused_absence')->count(),
-        'not_recorded'     => $notRecorded->count(),
+        'total_students'    => $students->count(),
+        'present'           => $recorded->where('status', 'present')->count(),
+        'excused_absence'   => $recorded->where('status', 'excused_absence')->count(),
+        'unexcused_absence' => $recorded->where('status', 'unexcused_absence')->count(),
+        'not_recorded'      => $notRecorded->count(),
     ];
 
-    return response()->json([
-        'status'     => true,
+    $responseData = [
         'teacher_id' => $teacher->id,
         'filters'    => [
             'date' => $defaultDate,
@@ -354,7 +357,9 @@ public function getAttendances(Request $request, $id)
             'recorded'     => $recorded,
             'not_recorded' => $notRecorded,
         ],
-    ]);
+    ];
+
+    return $this->success($responseData, 'Attendances fetched successfully');
 }
 
 
