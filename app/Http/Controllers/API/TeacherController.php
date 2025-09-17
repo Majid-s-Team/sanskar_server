@@ -146,37 +146,94 @@ class TeacherController extends Controller
             'statuses' => Attendance::STATUSES
         ]);
     }
+    // public function getStudents(Request $request, $teacherId)
+    // {
+    //     try {
+    //         $teacher = Teacher::find($teacherId);
+
+    //         if (! $teacher) {
+    //             return $this->error('Teacher not found', 404);
+    //         }
+
+    //         $perPage = $request->get('per_page', 10);
+
+    //         $students = Student::where('gurukal_id', $teacher->gurukal_id)
+    //             ->paginate($perPage);
+
+    //         $attendance = Attendance::where('teacher_id', $teacher->id)
+    //             ->whereDate('attendance_date', now()->toDateString())
+    //             ->get()
+    //             ->keyBy('student_id');
+
+    //         return $this->success([
+    //             'teacher'        => $teacher->full_name,
+    //             'students_count' => $students->total(),
+    //             'students'       => $students->items(),
+    //             'pagination'     => [
+    //                 'count'        => $students->total(),
+    //                 'pageCount'    => $students->lastPage(),
+    //                 'perPage'      => $students->perPage(),
+    //                 'currentPage'  => $students->currentPage(),
+    //             ],
+    //         ], 'Students fetched successfully');
+    //     } catch (\Exception $e) {
+    //         return $this->error('Something went wrong', 500, [
+    //             'error' => $e->getMessage()
+    //         ]);
+    //     }
+    // }
     public function getStudents(Request $request, $teacherId)
-    {
-        try {
-            $teacher = Teacher::find($teacherId);
+{
+    try {
+        $teacher = Teacher::find($teacherId);
 
-            if (! $teacher) {
-                return $this->error('Teacher not found', 404);
-            }
-
-            $perPage = $request->get('per_page', 10);
-
-            $students = Student::where('gurukal_id', $teacher->gurukal_id)
-                ->paginate($perPage);
-
-            return $this->success([
-                'teacher'        => $teacher->full_name,
-                'students_count' => $students->total(),
-                'students'       => $students->items(),
-                'pagination'     => [
-                    'count'        => $students->total(),
-                    'pageCount'    => $students->lastPage(),
-                    'perPage'      => $students->perPage(),
-                    'currentPage'  => $students->currentPage(),
-                ],
-            ], 'Students fetched successfully');
-        } catch (\Exception $e) {
-            return $this->error('Something went wrong', 500, [
-                'error' => $e->getMessage()
-            ]);
+        if (! $teacher) {
+            return $this->error('Teacher not found', 404);
         }
+
+        $perPage     = $request->get('per_page', 10);
+        $targetDate  = $request->get('date', now()->toDateString());
+
+        // students list with pagination
+        $students = Student::where('gurukal_id', $teacher->gurukal_id)
+            ->paginate($perPage);
+
+        // students ke sath attendance attach karo
+        $studentsData = collect($students->items())->map(function ($student) use ($teacher, $targetDate) {
+            $attendance = Attendance::where('teacher_id', $teacher->id)
+                ->where('student_id', $student->id)
+                ->whereDate('attendance_date', $targetDate)
+                ->first();
+
+            return [
+                'student_id'   => $student->id,
+                'student_name' => $student->first_name . ' ' . $student->last_name,
+                'date'         => $targetDate,
+                'status'       => $attendance->status ?? 'not_recorded',
+                'participation_points' => $attendance->participation_points ?? 0,
+                'homework_points'      => $attendance->homework_points ?? 0,
+            ];
+        });
+
+        return $this->success([
+            'teacher'        => $teacher->full_name,
+            'date'           => $targetDate,
+            'students_count' => $students->total(),
+            'students'       => $studentsData,
+            'pagination'     => [
+                'count'        => $students->total(),
+                'pageCount'    => $students->lastPage(),
+                'perPage'      => $students->perPage(),
+                'currentPage'  => $students->currentPage(),
+            ],
+        ], 'Students fetched successfully');
+    } catch (\Exception $e) {
+        return $this->error('Something went wrong', 500, [
+            'error' => $e->getMessage()
+        ]);
     }
+}
+
 
 
 
