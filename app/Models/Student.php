@@ -27,7 +27,8 @@ class Student extends Model
         'gurukal_id',
         'school_grade_id',
         'profile_image',
-        'is_payment_done'
+        'is_payment_done',
+        'is_new_student',
         // 'address', 'city', 'state', 'zip_code'
     ];
 

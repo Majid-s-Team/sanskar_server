@@ -10,7 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use App\Traits\ApiResponse;
-
+use Illuminate\Support\Facades\Validator;
+use App\Models\Teacher;
 class AuthController extends Controller
 {
     use ApiResponse;
@@ -53,6 +54,7 @@ class AuthController extends Controller
             'students.*.gurukal_id' => 'required|exists:gurukals,id',
             'students.*.school_grade_id' => 'required|exists:grades,id',
             'students.*.profile_image' => 'nullable|url',
+            'students.*.is_new_student' => 'nullable|boolean',
 
         ]);
 
@@ -123,22 +125,7 @@ class AuthController extends Controller
             return $this->error('Your account is inactive', 403);
         }
 
-        // if (!$user->is_payment_done) {
-        //     return $this->error('Payment not completed. Please complete your payment to proceed.', 403);
-        // }
-        // if (!$user->is_payment_done) {
-        //     return $this->error(
-        //         'Payment not completed. Please complete your payment to proceed.',
-        //         403,
-        //         [
-        //             'id' => $user->id,
-        //             'primary_email' => $user->primary_email,
-        //             'mobile_number' => $user->mobile_number,
-        //             'student_count' => $user->students()->count(), 
-        //         ]
-        //     );
-        // }
-           if ($user->hasRole('user') && !$user->is_payment_done) {
+        if ($user->hasRole('user') && !$user->is_payment_done) {
             return $this->error(
                 'Payment not completed. Please complete your payment to proceed.',
                 403,
@@ -146,20 +133,30 @@ class AuthController extends Controller
                     'id' => $user->id,
                     'primary_email' => $user->primary_email,
                     'mobile_number' => $user->mobile_number,
-                    'student_count' => $user->students()->count(), 
+                    'student_count' => $user->students()->count(),
                 ]
             );
         }
 
-
-
         $token = $user->createToken('API Token')->plainTextToken;
 
-        return $this->success([
-            'user' => $user->load('students', 'fatherActivities', 'motherActivities'),
+        $relations = ['students', 'fatherActivities', 'motherActivities'];
+
+        $responseData = [
+            'user'  => $user->load($relations),
             'roles' => $user->getRoleNames(),
             'token' => $token,
-        ], 'Login successful');
+        ];
+
+        if ($user->hasRole('teacher')) {
+            $teacher = Teacher::where('user_id', $user->id)
+                ->with(['gurukal', 'attendances']) 
+                ->first();
+
+            $responseData['teacher'] = $teacher;
+        }
+
+        return $this->success($responseData, 'Login successful');
     }
 
     public function logout(Request $request)

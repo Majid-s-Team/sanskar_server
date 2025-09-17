@@ -70,6 +70,7 @@ class WeeklyUpdateController extends Controller
             'media' => 'nullable|array',
             'media.*.type' => 'nullable|string|in:image,video,pdf,link,other',
             'media.*.url' => 'nullable|url',
+            'media.*.name' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -91,7 +92,7 @@ class WeeklyUpdateController extends Controller
         return $this->success($update->load(['teacher.user','gurukal']), 'Weekly update created', 201);
     }
 
-    // Update - only owner teacher (or admin)
+
     public function update(Request $request, $id)
     {
         $user = $request->user();
@@ -114,6 +115,7 @@ class WeeklyUpdateController extends Controller
             'media' => 'nullable|array',
             'media.*.type' => 'nullable|string|in:image,video,pdf,link,other',
             'media.*.url' => 'nullable|url',
+            'media.*.name' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {

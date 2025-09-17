@@ -148,20 +148,36 @@ class TeacherController extends Controller
     }
     public function getStudents(Request $request, $teacherId)
     {
-        $teacher = Teacher::findOrFail($teacherId);
+        try {
+            $teacher = Teacher::find($teacherId);
 
-        $perPage = $request->get('per_page', 10);
+            if (! $teacher) {
+                return $this->error('Teacher not found', 404);
+            }
 
-        $students = Student::where('gurukal_id', $teacher->gurukal_id)
-            ->paginate($perPage);
+            $perPage = $request->get('per_page', 10);
 
-        return response()->json([
-            'teacher' => $teacher->full_name,
-            'students_count' => $students->total(),
-            'students' => $students->items(),
-            'pagination' => $this->paginate($students)
-        ]);
+            $students = Student::where('gurukal_id', $teacher->gurukal_id)
+                ->paginate($perPage);
+
+            return $this->success([
+                'teacher'        => $teacher->full_name,
+                'students_count' => $students->total(),
+                'students'       => $students->items(),
+                'pagination'     => [
+                    'count'        => $students->total(),
+                    'pageCount'    => $students->lastPage(),
+                    'perPage'      => $students->perPage(),
+                    'currentPage'  => $students->currentPage(),
+                ],
+            ], 'Students fetched successfully');
+        } catch (\Exception $e) {
+            return $this->error('Something went wrong', 500, [
+                'error' => $e->getMessage()
+            ]);
+        }
     }
+
 
 
     public function markAttendance(Request $request, $id)

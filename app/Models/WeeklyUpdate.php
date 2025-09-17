@@ -16,6 +16,7 @@ class WeeklyUpdate extends Model
         'title',
         'description',
         'media',
+        'name'
     ];
 
     protected $casts = [

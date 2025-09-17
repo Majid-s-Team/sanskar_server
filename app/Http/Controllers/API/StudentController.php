@@ -53,6 +53,7 @@ class StudentController extends Controller
             'teeshirt_size_id'     => 'nullable|exists:teeshirt_sizes,id',
             'gurukal_id'           => 'nullable|exists:gurukals,id',
             'school_grade_id'      => 'nullable|exists:grades,id',
+            'is_new_student'       => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
