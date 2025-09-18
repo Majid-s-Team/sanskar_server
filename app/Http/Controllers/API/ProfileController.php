@@ -27,51 +27,54 @@ class ProfileController extends Controller
         return $this->success($user, 'Profile fetched');
     }
 
-    public function update(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'primary_email'            => 'nullable|email',
-            'secondary_email'          => 'nullable|email',
-            'mobile_number'            => 'nullable|string|max:20',
-            'secondary_mobile_number'  => 'nullable|string|max:20',
-            'father_name'              => 'nullable|string|max:255',
-            'mother_name'              => 'nullable|string|max:255',
-            'father_volunteering'      => 'nullable|boolean',
-            'mother_volunteering'      => 'nullable|boolean',
-             'father_activities'        => 'nullable|array', 
-            'mother_activities'        => 'nullable|array', 
-            'is_hsnc_member'           => 'nullable|boolean',
-            'address'                  => 'nullable|string|max:500',
-            'city'                     => 'nullable|string|max:100',
-            'state'                    => 'nullable|string|max:100',
-            'zip_code'                 => 'nullable|string|max:10',
-            'is_active'                => 'nullable|boolean',
-            'is_payment_done'          => 'nullable|boolean',
-        ]);
+public function update(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'primary_email'            => 'nullable|email',
+        'secondary_email'          => 'nullable|email',
+        'mobile_number'            => 'nullable|string|max:20',
+        'secondary_mobile_number'  => 'nullable|string|max:20',
+        'father_name'              => 'nullable|string|max:255',
+        'mother_name'              => 'nullable|string|max:255',
+        'father_volunteering'      => 'nullable|boolean',
+        'mother_volunteering'      => 'nullable|boolean',
+        'father_activities'        => 'nullable|array', 
+        'mother_activities'        => 'nullable|array', 
+        'is_hsnc_member'           => 'nullable|boolean',
+        'address'                  => 'nullable|string|max:500',
+        'city'                     => 'nullable|string|max:100',
+        'state'                    => 'nullable|string|max:100',
+        'zip_code'                 => 'nullable|string|max:10',
+        'is_active'                => 'nullable|boolean',
+        'is_payment_done'          => 'nullable|boolean',
+    ]);
 
-        if ($validator->fails()) {
-            return $this->error($validator->errors()->first(), 422);
-        }
-
-        $user = $request->user();
-            $data = $validator->validated();
-
-        $user->update($validator->validated());
-    if (!empty($data['father_volunteering']) && !empty($data['father_activities'])) {
-            $user->fatherActivities()->sync($data['father_activities']);
-        } elseif (!empty($data['father_volunteering']) && empty($data['father_activities'])) {
-
-            $user->fatherActivities()->sync([]);
-        }
-
-
-        if (!empty($data['mother_volunteering']) && !empty($data['mother_activities'])) {
-            $user->motherActivities()->sync($data['mother_activities']);
-        } elseif (!empty($data['mother_volunteering']) && empty($data['mother_activities'])) {
-            $user->motherActivities()->sync([]);
-        }
-        return $this->success($user->fresh(), 'Profile updated successfully');
+    if ($validator->fails()) {
+        return $this->error($validator->errors()->first(), 422);
     }
+
+    $user = $request->user();
+    $data = $validator->validated();
+
+    $user->update($data);
+
+    if (!empty($data['father_volunteering'])) {
+        $user->fatherActivities()->sync($data['father_activities'] ?? []);
+    } else {
+        $user->fatherActivities()->sync([]);
+    }
+
+    if (!empty($data['mother_volunteering'])) {
+        $user->motherActivities()->sync($data['mother_activities'] ?? []);
+    } else {
+        $user->motherActivities()->sync([]);
+    }
+
+    $user->load(['fatherActivities', 'motherActivities']);
+
+    return $this->success($user, 'Profile updated successfully');
+}
+
 
 //   public function getUserPdf(Request $request)
 //     {
