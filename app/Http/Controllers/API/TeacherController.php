@@ -194,26 +194,28 @@ class TeacherController extends Controller
         $perPage     = $request->get('per_page', 10);
         $targetDate  = $request->get('date', now()->toDateString());
 
-        // students list with pagination
+
         $students = Student::where('gurukal_id', $teacher->gurukal_id)
             ->paginate($perPage);
 
-        // students ke sath attendance attach karo
-        $studentsData = collect($students->items())->map(function ($student) use ($teacher, $targetDate) {
-            $attendance = Attendance::where('teacher_id', $teacher->id)
-                ->where('student_id', $student->id)
-                ->whereDate('attendance_date', $targetDate)
-                ->first();
 
-            return [
-                'student_id'   => $student->id,
-                'student_name' => $student->first_name . ' ' . $student->last_name,
-                'date'         => $targetDate,
-                'status'       => $attendance->status ?? 'not_recorded',
-                'participation_points' => $attendance->participation_points ?? 0,
-                'homework_points'      => $attendance->homework_points ?? 0,
-            ];
-        });
+       $studentsData = collect($students->items())->map(function ($student) use ($teacher, $targetDate) {
+    $attendance = Attendance::where('teacher_id', $teacher->id)
+        ->where('student_id', $student->id)
+        ->whereDate('attendance_date', $targetDate)
+        ->first();
+
+    return [
+        'student' => $student,  
+        'attendance' => [
+            'date' => $targetDate,
+            'status' => $attendance->status ?? 'not_recorded',
+            'participation_points' => $attendance->participation_points ?? 0,
+            'homework_points' => $attendance->homework_points ?? 0,
+        ]
+    ];
+});
+
 
         return $this->success([
             'teacher'        => $teacher->full_name,
