@@ -38,6 +38,8 @@ class ProfileController extends Controller
             'mother_name'              => 'nullable|string|max:255',
             'father_volunteering'      => 'nullable|boolean',
             'mother_volunteering'      => 'nullable|boolean',
+             'father_activities'        => 'nullable|array', 
+            'mother_activities'        => 'nullable|array', 
             'is_hsnc_member'           => 'nullable|boolean',
             'address'                  => 'nullable|string|max:500',
             'city'                     => 'nullable|string|max:100',
@@ -52,8 +54,22 @@ class ProfileController extends Controller
         }
 
         $user = $request->user();
-        $user->update($validator->validated());
+            $data = $validator->validated();
 
+        $user->update($validator->validated());
+    if (!empty($data['father_volunteering']) && !empty($data['father_activities'])) {
+            $user->fatherActivities()->sync($data['father_activities']);
+        } elseif (!empty($data['father_volunteering']) && empty($data['father_activities'])) {
+
+            $user->fatherActivities()->sync([]);
+        }
+
+
+        if (!empty($data['mother_volunteering']) && !empty($data['mother_activities'])) {
+            $user->motherActivities()->sync($data['mother_activities']);
+        } elseif (!empty($data['mother_volunteering']) && empty($data['mother_activities'])) {
+            $user->motherActivities()->sync([]);
+        }
         return $this->success($user->fresh(), 'Profile updated successfully');
     }
 
