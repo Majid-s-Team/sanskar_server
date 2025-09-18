@@ -38,8 +38,8 @@ public function update(Request $request)
         'mother_name'              => 'nullable|string|max:255',
         'father_volunteering'      => 'nullable|boolean',
         'mother_volunteering'      => 'nullable|boolean',
-        'father_activities'        => 'nullable|array', 
-        'mother_activities'        => 'nullable|array', 
+        'father_activity_ids'        => 'nullable|array', 
+        'mother_activity_ids'        => 'nullable|array', 
         'is_hsnc_member'           => 'nullable|boolean',
         'address'                  => 'nullable|string|max:500',
         'city'                     => 'nullable|string|max:100',
@@ -58,14 +58,14 @@ public function update(Request $request)
 
     $user->update($data);
 
-    if (!empty($data['father_volunteering'])) {
-        $user->fatherActivities()->sync($data['father_activities'] ?? []);
+    if (!empty($data['father_activity_ids'])) {
+        $user->fatherActivities()->sync($data['father_activity_ids'] ?? []);
     } else {
         $user->fatherActivities()->sync([]);
     }
 
-    if (!empty($data['mother_volunteering'])) {
-        $user->motherActivities()->sync($data['mother_activities'] ?? []);
+    if (!empty($data['mother_activity_ids'])) {
+        $user->motherActivities()->sync($data['mother_activity_ids'] ?? []);
     } else {
         $user->motherActivities()->sync([]);
     }
