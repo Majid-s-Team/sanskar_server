@@ -32,10 +32,12 @@ class User extends Authenticatable
         'otp',
         'otp_expires_at',
         'is_otp_verified',
-        'profile_image'
+        'profile_image',
+        'role',
 
 
     ];
+    protected $guard_name = 'sanctum';
 
     protected $hidden = ['password', 'remember_token'];
 

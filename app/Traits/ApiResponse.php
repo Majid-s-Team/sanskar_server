@@ -28,11 +28,11 @@ trait ApiResponse
             'status'  => true,
             'message' => $message,
             'data'    => $data->items(),
-            'meta'    => [
-                'current_page' => $data->currentPage(),
-                'per_page'     => $data->perPage(),
-                'total'        => $data->total(),
-                'last_page'    => $data->lastPage(),
+                'pagination' => [
+                'count'        => $data->total(),        
+                'pageCount'    => $data->lastPage(),     
+                'perPage'      => $data->perPage(),      
+                'currentPage'  => $data->currentPage(),  
             ],
         ]);
     }

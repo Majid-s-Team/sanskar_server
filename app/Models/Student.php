@@ -26,7 +26,9 @@ class Student extends Model
         'teeshirt_size_id',
         'gurukal_id',
         'school_grade_id',
-        'profile_image'
+        'profile_image',
+        'is_payment_done',
+        'is_new_student',
         // 'address', 'city', 'state', 'zip_code'
     ];
 
@@ -51,4 +53,9 @@ class Student extends Model
     {
         return $this->belongsTo(Grade::class, 'school_grade_id');
     }
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
 }

@@ -14,6 +14,9 @@ use App\Http\Controllers\WebAPI\GurukalController;
 use App\Http\Controllers\WebAPI\TeeshirtSizeController;
 use App\Http\Controllers\API\StudentController;
 use App\Http\Controllers\API\PaymentController;
+use App\Http\Controllers\API\TeacherController;
+use App\Http\Controllers\API\WeeklyUpdateController;
+use App\Http\Controllers\API\AnnouncementController;
 
 /*
 |--------------------------------------------------------------------------
@@ -82,18 +85,44 @@ Route::prefix('student')->group(function () {
     Route::patch('/{id}/status', [StudentController::class, 'changeStatus']);
 });
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('for-student', [WeeklyUpdateController::class, 'forStudents']);
+});
+Route::middleware('auth:sanctum')->prefix('weekly-updates')->group(function () {
+
+    Route::get('/', [\App\Http\Controllers\API\WeeklyUpdateController::class, 'index']);
+    Route::get('/{id}', [\App\Http\Controllers\API\WeeklyUpdateController::class, 'show']);
+    Route::post('/', [\App\Http\Controllers\API\WeeklyUpdateController::class, 'store']);
+    Route::put('/{id}', [\App\Http\Controllers\API\WeeklyUpdateController::class, 'update']);
+    Route::delete('/{id}', [\App\Http\Controllers\API\WeeklyUpdateController::class, 'destroy']);
+
+    // trash/restore/force
+    Route::get('/trashed/list', [\App\Http\Controllers\API\WeeklyUpdateController::class, 'trashed']);
+    Route::post('/{id}/restore', [\App\Http\Controllers\API\WeeklyUpdateController::class, 'restore']);
+    Route::delete('/{id}/force', [\App\Http\Controllers\API\WeeklyUpdateController::class, 'forceDelete']);
+
+});
+
+Route::middleware('auth:sanctum')->group(function () {
     Route::post('logout', [AuthController::class, 'logout']);
     Route::post('change-password', [PasswordController::class, 'changePassword']);
     Route::get('profile', [ProfileController::class, 'view']);
     Route::post('profile-update', [ProfileController::class, 'update']);
-
-
-
-
-
-
     Route::get('roles', [RoleController::class, 'index']);
     Route::post('roles', [RoleController::class, 'store']);
+    Route::apiResource('teachers', TeacherController::class);
+    Route::get('teachers/{id}/students', [TeacherController::class, 'getStudents']);
+    Route::post('teacher/{id}/attendance', [TeacherController::class, 'markAttendance']);
+    Route::get('attendance/statuses', [TeacherController::class, 'getStatuses']);
+    Route::get('teacher/{id}/attendances', [TeacherController::class, 'getAttendances']);
+   
+      Route::get('/announcements', [AnnouncementController::class, 'index']);
+    Route::get('/announcements/{id}', [AnnouncementController::class, 'show']);
+    Route::post('/announcements', [AnnouncementController::class, 'store']);
+    Route::put('/announcements/{id}', [AnnouncementController::class, 'update']);
+    Route::delete('/announcements/{id}', [AnnouncementController::class, 'destroy']);
+        Route::get('/annoucement-student', [AnnouncementController::class, 'forStudents']);
+
+
     // Route::delete('roles/{id}', [RoleController::class, 'destroy']);
 
     // // Permission management
