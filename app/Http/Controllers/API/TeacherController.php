@@ -373,64 +373,59 @@ class TeacherController extends Controller
     //         ],
     //     ]);
     // }
-public function getAttendances(Request $request, $id)
-{
-    $teacher = Teacher::with('gurukal')->find($id);
-
-    if (!$teacher) {
-        return $this->error('Teacher not found', 404);
-    }
-
-    $students = Student::where('gurukal_id', $teacher->gurukal_id)->get();
-
-    // jo date pass hui hai usko target karo, warna aaj ka
-    $defaultDate = $request->date ?? now()->toDateString();
-
-    // saare students ke against attendance fetch karo
-    $records = $students->map(function ($student) use ($teacher, $defaultDate) {
-        $attendance = Attendance::where('teacher_id', $teacher->id)
-            ->where('student_id', $student->id)
-            ->whereDate('attendance_date', $defaultDate)
-            ->first();
-
-        return [
-            'student_id'           => $student->id,
-            'student_name'         => $student->first_name . ' ' . $student->last_name,
-            'status'               => $attendance->status ?? 'not_recorded',
-            'date'                 => $defaultDate,
-            'participation_points' => $attendance->participation_points ?? 0,
-            'homework_points'      => $attendance->homework_points ?? 0,
+    public function getAttendances(Request $request, $id)
+    {
+        $teacher = Teacher::with('gurukal')->find($id);
+    
+        if (!$teacher) {
+            return $this->error('Teacher not found', 404);
+        }
+    
+        $students = Student::with('user')->where('gurukal_id', $teacher->gurukal_id)->get();
+    
+        $defaultDate = $request->date ?? now()->toDateString();
+    
+        $records = $students->map(function ($student) use ($teacher, $defaultDate) {
+            $attendance = Attendance::where('teacher_id', $teacher->id)
+                ->where('student_id', $student->id)
+                ->whereDate('attendance_date', $defaultDate)
+                ->first();
+    
+            return [
+                'student'              => $student, 
+                'status'               => $attendance->status ?? 'not_recorded',
+                'date'                 => $defaultDate,
+                'participation_points' => $attendance->participation_points ?? 0,
+                'homework_points'      => $attendance->homework_points ?? 0,
+            ];
+        });
+    
+        $recorded    = $records->filter(fn($r) => $r['status'] !== 'not_recorded')->values();
+        $notRecorded = $records->filter(fn($r) => $r['status'] === 'not_recorded')->values();
+    
+        $counts = [
+            'total_students'    => $students->count(),
+            'present'           => $recorded->where('status', 'present')->count(),
+            'excused_absence'   => $recorded->where('status', 'excused_absence')->count(),
+            'unexcused_absence' => $recorded->where('status', 'unexcused_absence')->count(),
+            'not_recorded'      => $notRecorded->count(),
         ];
-    });
-
-    // recorded / not_recorded split
-    $recorded    = $records->filter(fn($r) => $r['status'] !== 'not_recorded')->values();
-    $notRecorded = $records->filter(fn($r) => $r['status'] === 'not_recorded')->values();
-
-    // counts
-    $counts = [
-        'total_students'    => $students->count(),
-        'present'           => $recorded->where('status', 'present')->count(),
-        'excused_absence'   => $recorded->where('status', 'excused_absence')->count(),
-        'unexcused_absence' => $recorded->where('status', 'unexcused_absence')->count(),
-        'not_recorded'      => $notRecorded->count(),
-    ];
-
-    $responseData = [
-        'teacher_id' => $teacher->id,
-        'filters'    => [
-            'date' => $defaultDate,
-        ],
-        'counts'     => $counts,
-        'arrays'     => [
-            'all'          => $records,
-            'recorded'     => $recorded,
-            'not_recorded' => $notRecorded,
-        ],
-    ];
-
-    return $this->success($responseData, 'Attendances fetched successfully');
-}
+    
+        $responseData = [
+            'teacher_id' => $teacher->id,
+            'filters'    => [
+                'date' => $defaultDate,
+            ],
+            'counts'     => $counts,
+            'arrays'     => [
+                'all'          => $records,
+                'recorded'     => $recorded,
+                'not_recorded' => $notRecorded,
+            ],
+        ];
+    
+        return $this->success($responseData, 'Attendances fetched successfully');
+    }
 
 
 
