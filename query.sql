@@ -11,3 +11,12 @@ ALTER TABLE `sanskar`.`students`
 
 ALTER TABLE `sanskar`.`weekly_updates`   
 	ADD COLUMN `name` VARCHAR(255) NULL AFTER `media`;
+
+
+
+---------------------------------------------
+-- 2024-06-17 12:00:00
+-- Querys
+---------------------------------------------
+
+
