@@ -97,6 +97,7 @@ class AuthController extends Controller
                 $studentData['user_id'] = $user->id;
                 Student::create($studentData);
             }
+            $user->assignRole('user');
 
             DB::commit();
             return $this->success($user->load('students', 'fatherActivities', 'motherActivities'), 'Signup completed successfully');

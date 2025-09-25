@@ -47,6 +47,7 @@ public function update(Request $request)
         'zip_code'                 => 'nullable|string|max:10',
         'is_active'                => 'nullable|boolean',
         'is_payment_done'          => 'nullable|boolean',
+        'profile_image'            => 'nullable|url',
     ]);
 
     if ($validator->fails()) {
@@ -271,6 +272,8 @@ public function getUserPdf(Request $request)
     $request->validate([
         'per_page' => 'sometimes|integer|min:1|max:100',
         'page' => 'sometimes|integer|min:1',
+        'user_id' => 'sometimes|integer|exists:users,id',
+        'primary_email' => 'sometimes|email',
     ]);
 
     $perPage = $request->input('per_page', 10);
@@ -280,16 +283,27 @@ public function getUserPdf(Request $request)
         return $page;
     });
 
-    $users = User::with(['students', 'fatherActivities', 'motherActivities'])->where('is_payment_done', 1)
-        ->Where('is_otp_verified',0)
-        ->orderBy('id', 'asc')
-        ->paginate($perPage);
+    $query = User::with(['students', 'fatherActivities', 'motherActivities'])
+        ->where('is_payment_done', 1)
+        ->where('is_otp_verified', 0);
+
+    if ($request->has('user_id')) {
+        $query->where('id', $request->user_id);
+    }
+
+
+    if ($request->has('primary_email')) {
+        $query->where('primary_email', $request->primary_email);
+    }
+
+    $users = $query->orderBy('id', 'asc')->paginate($perPage);
 
     return $this->success([
         'users' => $users->items(),
         'pagination' => $this->paginate($users),
     ], 'Users Fetched Successfully');
 }
+
 
 
 

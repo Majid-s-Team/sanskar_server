@@ -68,9 +68,12 @@ class WeeklyUpdateController extends Controller
             'title' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'media' => 'nullable|array',
-            'media.*.type' => 'nullable|string|in:image,video,pdf,link,other',
+            'media.*.type' => 'nullable|string|in:image,video,pdf,excel,powerpoint,mp3,link,other',
             'media.*.url' => 'nullable|url',
             'media.*.name' => 'nullable|string',
+            'media.*.file' => 'nullable|file|max:102400', 
+
+
         ]);
 
         if ($validator->fails()) {

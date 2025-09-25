@@ -16,11 +16,33 @@ class TeacherController extends Controller
 {
     use ApiResponse;
 
-    public function index()
+    public function index(Request $request)
     {
-        $teachers = Teacher::with(['user', 'gurukal'])->get();
+        $request->validate([
+            'user_id' => 'sometimes|integer|exists:users,id',
+            'full_name' => 'sometimes|string',
+            'gurukal_id' => 'sometimes|integer|exists:gurukals,id',
+        ]);
+
+        $query = Teacher::with(['user', 'gurukal']);
+
+        if ($request->has('user_id')) {
+            $query->where('user_id', $request->user_id);
+        }
+
+        if ($request->has('full_name')) {
+            $query->where('full_name', 'like', '%' . $request->full_name . '%');
+        }
+
+        if ($request->has('gurukal_id')) {
+            $query->where('gurukal_id', $request->gurukal_id);
+        }
+
+        $teachers = $query->get();
+
         return $this->success($teachers, 'Teachers fetched successfully');
     }
+
 
     public function store(Request $request)
     {
@@ -182,7 +204,7 @@ class TeacherController extends Controller
     //         ]);
     //     }
     // }
-    public function getStudents(Request $request, $teacherId)
+public function getStudents(Request $request, $teacherId)
 {
     try {
         $teacher = Teacher::find($teacherId);
@@ -191,15 +213,38 @@ class TeacherController extends Controller
             return $this->error('Teacher not found', 404);
         }
 
+        $request->validate([
+            'per_page'   => 'sometimes|integer|min:1|max:100',
+            'date'       => 'sometimes|date',
+            'user_id'    => 'sometimes|integer|exists:users,id',
+            'name'       => 'sometimes|string',
+            'gurukal_id' => 'sometimes|integer|exists:gurukals,id',
+        ]);
+
         $perPage    = $request->get('per_page', 10);
         $targetDate = $request->get('date', now()->toDateString());
 
-        // Fetch students with parent/user data
-        $students = Student::where('gurukal_id', $teacher->gurukal_id)
-            ->with('user') // eager load parent data
-            ->paginate($perPage);
+        $query = Student::with('user')
+            ->where('gurukal_id', $teacher->gurukal_id);
 
-        // Map student data with attendance
+        if ($request->has('user_id')) {
+            $query->where('user_id', $request->user_id);
+        }
+
+        if ($request->has('name')) {
+            $name = $request->name;
+            $query->where(function ($q) use ($name) {
+                $q->where('first_name', 'like', "%$name%")
+                  ->orWhere('last_name', 'like', "%$name%");
+            });
+        }
+
+        if ($request->has('gurukal_id')) {
+            $query->where('gurukal_id', $request->gurukal_id);
+        }
+
+        $students = $query->paginate($perPage);
+
         $studentsData = $students->map(function ($student) use ($teacher, $targetDate) {
             $attendance = Attendance::where('teacher_id', $teacher->id)
                 ->where('student_id', $student->id)
@@ -207,7 +252,7 @@ class TeacherController extends Controller
                 ->first();
 
             return [
-                'student' => $student, // includes parent/user
+                'student' => $student,
                 'attendance' => [
                     'date'                 => $targetDate,
                     'status'               => $attendance->status ?? 'not_recorded',
@@ -222,22 +267,13 @@ class TeacherController extends Controller
             'date'           => $targetDate,
             'students_count' => $students->total(),
             'students'       => $studentsData,
-        ], 'Students fetched successfully')->setData([
-            'status'  => true,
-            'message' => 'Students fetched successfully',
-            'data'    => [
-                'teacher'        => $teacher->full_name,
-                'date'           => $targetDate,
-                'students_count' => $students->total(),
-                'students'       => $studentsData,
-            ],
-            'pagination' => [
+            'pagination'     => [
                 'count'        => $students->total(),
                 'pageCount'    => $students->lastPage(),
                 'perPage'      => $students->perPage(),
                 'currentPage'  => $students->currentPage(),
             ],
-        ]);
+        ], 'Students fetched successfully');
 
     } catch (\Exception $e) {
         return $this->error('Something went wrong', 500, [
@@ -245,7 +281,6 @@ class TeacherController extends Controller
         ]);
     }
 }
-
 
 
 
