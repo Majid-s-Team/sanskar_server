@@ -57,7 +57,6 @@ class WeeklyUpdateController extends Controller
     {
         $user = $request->user();
 
-        // ensure user is a teacher
         $teacher = Teacher::where('user_id', $user->id)->first();
         if (! $teacher) {
             return $this->error('Only teachers can create weekly updates', 403);
@@ -68,7 +67,7 @@ class WeeklyUpdateController extends Controller
             'title' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'media' => 'nullable|array',
-            'media.*.type' => 'nullable|string|in:image,video,pdf,excel,powerpoint,mp3,link,other',
+            'media.*.type' => 'nullable|string|in:image,doc,video,pdf,excel,powerpoint,mp3,link,other',
             'media.*.url' => 'nullable|url',
             'media.*.name' => 'nullable|string',
             'media.*.file' => 'nullable|file|max:102400', 
@@ -80,7 +79,7 @@ class WeeklyUpdateController extends Controller
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        // Copy gurukal from teacher to ensure consistency
+
         $gurukalId = $teacher->gurukal_id;
 
         $update = WeeklyUpdate::create([
@@ -105,7 +104,6 @@ class WeeklyUpdateController extends Controller
             return $this->error('Update not found', 404);
         }
 
-        // allow if current user is the teacher who created it OR admin
         $isOwner = $update->teacher && $update->teacher->user_id === $user->id;
         if (! $isOwner && ! $request->user()->hasRole('admin')) {
             return $this->error('Unauthorized to update this entry', 403);

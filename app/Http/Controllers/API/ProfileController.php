@@ -267,43 +267,56 @@ public function getUserPdf(Request $request)
 }
 
 
-   public function viewAll(Request $request)
-{
-    $request->validate([
-        'per_page' => 'sometimes|integer|min:1|max:100',
-        'page' => 'sometimes|integer|min:1',
-        'user_id' => 'sometimes|integer|exists:users,id',
-        'primary_email' => 'sometimes|email',
-    ]);
+    public function viewAll(Request $request)
+    {
+        $request->validate([
+            'per_page' => 'sometimes|integer|min:1|max:100',
+            'page' => 'sometimes|integer|min:1',
+            'user_id' => 'sometimes|integer|exists:users,id',
+            'primary_email' => 'sometimes|string',
+            'secondary_email' => 'sometimes|string',
+            'father_name' => 'sometimes|string',
+            'mother_name' => 'sometimes|string',
+        ]);
 
-    $perPage = $request->input('per_page', 10);
-    $page = $request->input('page', 1);
+        $perPage = $request->input('per_page', 10);
+        $page = $request->input('page', 1);
 
-    Paginator::currentPageResolver(function () use ($page) {
-        return $page;
-    });
+        Paginator::currentPageResolver(function () use ($page) {
+            return $page;
+        });
 
-    $query = User::with(['students', 'fatherActivities', 'motherActivities'])
-        ->where('is_payment_done', 1)
-        ->where('is_otp_verified', 0);
+        $query = User::with(['students', 'fatherActivities', 'motherActivities'])
+            ->where('is_payment_done', 1)
+            ->where('is_otp_verified', 0);
 
-    if ($request->has('user_id')) {
-        $query->where('id', $request->user_id);
+        if ($request->has('user_id')) {
+            $query->where('id', $request->user_id);
+        }
+
+        if ($request->has('primary_email')) {
+            $query->where('primary_email', 'like', "%{$request->primary_email}%");
+        }
+
+        if ($request->has('secondary_email')) {
+            $query->where('secondary_email', 'like', "%{$request->secondary_email}%");
+        }
+
+        if ($request->has('father_name')) {
+            $query->where('father_name', 'like', "%{$request->father_name}%");
+        }
+
+        if ($request->has('mother_name')) {
+            $query->where('mother_name', 'like', "%{$request->mother_name}%");
+        }
+
+        $users = $query->orderBy('id', 'asc')->paginate($perPage);
+
+        return $this->success([
+            'users' => $users->items(),
+            'pagination' => $this->paginate($users),
+        ], 'Users Fetched Successfully');
     }
-
-
-    if ($request->has('primary_email')) {
-        $query->where('primary_email', $request->primary_email);
-    }
-
-    $users = $query->orderBy('id', 'asc')->paginate($perPage);
-
-    return $this->success([
-        'users' => $users->items(),
-        'pagination' => $this->paginate($users),
-    ], 'Users Fetched Successfully');
-}
-
 
 
 

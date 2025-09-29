@@ -34,6 +34,7 @@ class User extends Authenticatable
         'is_otp_verified',
         'profile_image',
         'role',
+        'is_payment_done',
 
 
     ];

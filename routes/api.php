@@ -29,6 +29,8 @@ use App\Http\Controllers\WebAPI\UserController;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+Route::get('/payments/check-all', [PaymentController::class, 'checkAllUsersPayments']);
+Route::get('/users/without-roles', [RoleController::class, 'getUsersWithoutRoles']);
 
 Route::post('signup', [AuthController::class, 'signup']);
 Route::post('login', [AuthController::class, 'login']);

@@ -171,4 +171,47 @@ $session = Session::retrieve($sessionId);
 
     return response()->json(['status' => 'success'], 200);
 }
+    public function checkAllUsersPayments()
+    {
+        $users = User::whereHas('payments', function ($q) {
+            $q->where('status', 'completed');
+        })
+        ->with([
+            'students',
+            'payments' => function ($q) {
+                $q->where('status', 'completed');
+            }
+        ])->get();
+
+        $report = $users->map(function ($user) {
+            $expectedTotal = $user->students->sum('fee');
+
+
+            $paidTotal = $user->payments->sum('amount') / 100;
+
+            return [
+                'user_id'        => $user->id,
+                'name'           => $user->father_name . ' & ' . $user->mother_name,
+                'student_count'  => $user->students->count(),
+                'students'       => $user->students->map(function ($student) {
+                    return [
+                        'student_id' => $student->id,
+                        'full_name'  => $student->first_name . ' ' . $student->last_name,
+                        'fee'        => $student->fee,
+                    ];
+                }),
+                'expected_total' => $expectedTotal,
+                'paid_total'     => $paidTotal,
+                'is_fully_paid'  => $paidTotal >= $expectedTotal,
+                'remaining'      => max($expectedTotal - $paidTotal, 0),
+            ];
+        });
+
+        return response()->json([
+            'status' => true,
+            'data'   => $report
+        ]);
+    }
+
+
 }

@@ -168,42 +168,7 @@ class TeacherController extends Controller
             'statuses' => Attendance::STATUSES
         ]);
     }
-    // public function getStudents(Request $request, $teacherId)
-    // {
-    //     try {
-    //         $teacher = Teacher::find($teacherId);
 
-    //         if (! $teacher) {
-    //             return $this->error('Teacher not found', 404);
-    //         }
-
-    //         $perPage = $request->get('per_page', 10);
-
-    //         $students = Student::where('gurukal_id', $teacher->gurukal_id)
-    //             ->paginate($perPage);
-
-    //         $attendance = Attendance::where('teacher_id', $teacher->id)
-    //             ->whereDate('attendance_date', now()->toDateString())
-    //             ->get()
-    //             ->keyBy('student_id');
-
-    //         return $this->success([
-    //             'teacher'        => $teacher->full_name,
-    //             'students_count' => $students->total(),
-    //             'students'       => $students->items(),
-    //             'pagination'     => [
-    //                 'count'        => $students->total(),
-    //                 'pageCount'    => $students->lastPage(),
-    //                 'perPage'      => $students->perPage(),
-    //                 'currentPage'  => $students->currentPage(),
-    //             ],
-    //         ], 'Students fetched successfully');
-    //     } catch (\Exception $e) {
-    //         return $this->error('Something went wrong', 500, [
-    //             'error' => $e->getMessage()
-    //         ]);
-    //     }
-    // }
 public function getStudents(Request $request, $teacherId)
 {
     try {
@@ -262,18 +227,22 @@ public function getStudents(Request $request, $teacherId)
             ];
         });
 
-        return $this->success([
+    return $this->successWithPagination(
+        [
             'teacher'        => $teacher->full_name,
             'date'           => $targetDate,
             'students_count' => $students->total(),
             'students'       => $studentsData,
-            'pagination'     => [
-                'count'        => $students->total(),
-                'pageCount'    => $students->lastPage(),
-                'perPage'      => $students->perPage(),
-                'currentPage'  => $students->currentPage(),
-            ],
-        ], 'Students fetched successfully');
+        ],
+        [
+            'count'        => $students->total(),
+            'pageCount'    => $students->lastPage(),
+            'perPage'      => $students->perPage(),
+            'currentPage'  => $students->currentPage(),
+        ],
+        'Students fetched successfully'
+    );
+
 
     } catch (\Exception $e) {
         return $this->error('Something went wrong', 500, [
@@ -333,81 +302,7 @@ public function getStudents(Request $request, $teacherId)
             'records' => $results,
         ]);
     }
-    // public function getAttendances(Request $request, $id)
-    // {
-    //     $teacher = Teacher::with('gurukal')->findOrFail($id);
-
-
-    //     $students = Student::where('gurukal_id', $teacher->gurukal_id)->get();
-
-    //     $query = Attendance::with('student')
-    //         ->where('teacher_id', $teacher->id);
-
-
-    //     if ($request->has('date')) {
-    //         $query->whereDate('attendance_date', $request->date);
-    //     }
-
-
-    //     if ($request->has('start_date') && $request->has('end_date')) {
-    //         $query->whereBetween('attendance_date', [$request->start_date, $request->end_date]);
-    //     }
-
-
-    //     $attendances = $query->orderBy('attendance_date', 'desc')->paginate(10);
-
-    //     $counts = [
-    //         'total_students' => $students->count(),
-    //         'total_days_marked' => Attendance::where('teacher_id', $teacher->id)
-    //             ->distinct('attendance_date')
-    //             ->count('attendance_date'),
-    //         'present' => $query->clone()->where('status', 'present')->count(),
-    //         'excused_absence' => $query->clone()->where('status', 'excused_absence')->count(),
-    //         'unexcused_absence' => $query->clone()->where('status', 'unexcused_absence')->count(),
-    //         'not_recorded' => $query->clone()->where('status', 'not_recorded')->count(),
-    //     ];
-
-
-    //     $recorded = $attendances->filter(fn($a) => $a->status !== 'not_recorded')->values();
-    //     $notRecorded = $attendances->filter(fn($a) => $a->status === 'not_recorded')->values();
-
-
-    //     $defaultDate = $request->date ?? now()->toDateString();
-    //     $default = $students->map(function ($student) use ($teacher, $defaultDate) {
-    //         $attendance = Attendance::where('teacher_id', $teacher->id)
-    //             ->where('student_id', $student->id)
-    //             ->whereDate('attendance_date', $defaultDate)
-    //             ->first();
-
-    //         return [
-    //             'student_id' => $student->id,
-    //             'student_name' => $student->first_name . ' ' . $student->last_name,
-    //             'status' => $attendance->status ?? 'not_recorded',
-    //         ];
-    //     });
-
-    //     return response()->json([
-    //         'status' => true,
-    //         'teacher_id' => $teacher->id,
-    //         'filters' => [
-    //             'date' => $request->date ?? null,
-    //             'start_date' => $request->start_date ?? null,
-    //             'end_date' => $request->end_date ?? null,
-    //         ],
-    //         'counts' => $counts,
-    //         'pagination' => [
-    //             'current_page' => $attendances->currentPage(),
-    //             'last_page' => $attendances->lastPage(),
-    //             'per_page' => $attendances->perPage(),
-    //             'total' => $attendances->total(),
-    //         ],
-    //         'arrays' => [
-    //             'all' => $default,
-    //             'recorded' => $recorded,
-    //             'not_recorded' => $notRecorded,
-    //         ],
-    //     ]);
-    // }
+  
     public function getAttendances(Request $request, $id)
     {
         $teacher = Teacher::with('gurukal')->find($id);
