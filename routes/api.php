@@ -42,7 +42,7 @@ Route::post('/stripe/webhook', [PaymentController::class, 'handleStripeWebhook']
 Route::post('/create-stripe-session', [PaymentController::class, 'createStripeSession']);
 Route::get('all-profiles', [ProfileController::class, 'viewAll']);
 Route::post('getDataPdf',[ProfileController::class,'getUserPdf']);
-Route::post('/upload-media', [MediaUploadController::class, 'upload']);
+Route::post('/upload-media', [ProfileController::class, 'upload']);
 Route::post('/test', [MediaUploadController::class, 'testPdf']);
  Route::prefix('activity')->group(function () {
     Route::get('/', [ActivityController::class, 'index']);
