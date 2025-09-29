@@ -21,10 +21,12 @@ class WeeklyUpdateController extends Controller
         $query = WeeklyUpdate::with(['teacher.user', 'gurukal'])
             ->orderBy('date', 'desc');
 
-        $user = $request->user();
-        if ($user->role === 'teacher') {
-            $query->where('teacher_id', $user->teacher->id);
-        }
+       $user = $request->user();
+
+if ($user->role === 'teacher' && $user->teacher) {
+    $query->where('teacher_id', $user->teacher->id);
+}
+
 
         if ($request->has('teacher_id') && $user->role !== 'teacher') {
             $query->where('teacher_id', $request->teacher_id);
@@ -214,46 +216,46 @@ class WeeklyUpdateController extends Controller
      * returns updates for the student's gurukal (class)
      */
    public function forStudents(Request $request)
-{
-    // dd('s');
-    $user = $request->user();
-    $perPage = $request->get('per_page', 10);
+    {
+        // dd('s');
+        $user = $request->user();
+        $perPage = $request->get('per_page', 10);
 
-    $studentId = $request->get('student_id');
+        $studentId = $request->get('student_id');
 
-    if ($studentId) {
-        // ek student ki updates
-        $student = $user->students()->find($studentId);
+        if ($studentId) {
+            // ek student ki updates
+            $student = $user->students()->find($studentId);
 
-        if (! $student) {
-            return $this->error('Student not found for this user', 404);
+            if (! $student) {
+                return $this->error('Student not found for this user', 404);
+            }
+
+            $gurukalIds = [$student->gurukal_id];
+        } else {
+            // parent ke sabhi students
+            $students = $user->students;
+
+            if ($students->isEmpty()) {
+                return $this->error('No students found for this user', 404);
+            }
+
+            $gurukalIds = $students->pluck('gurukal_id')->unique()->toArray();
         }
 
-        $gurukalIds = [$student->gurukal_id];
-    } else {
-        // parent ke sabhi students
-        $students = $user->students;
+        $query = WeeklyUpdate::with(['teacher.user', 'gurukal'])
+            ->whereIn('gurukal_id', $gurukalIds)
+            ->orderBy('date', 'desc');
 
-        if ($students->isEmpty()) {
-            return $this->error('No students found for this user', 404);
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $query->whereBetween('date', [$request->start_date, $request->end_date]);
+        } elseif ($request->has('date')) {
+            $query->whereDate('date', $request->date);
         }
 
-        $gurukalIds = $students->pluck('gurukal_id')->unique()->toArray();
+        $items = $query->paginate($perPage);
+
+        return $this->paginated($items, 'Weekly updates for student(s) fetched');
     }
-
-    $query = WeeklyUpdate::with(['teacher.user', 'gurukal'])
-        ->whereIn('gurukal_id', $gurukalIds)
-        ->orderBy('date', 'desc');
-
-    if ($request->has('start_date') && $request->has('end_date')) {
-        $query->whereBetween('date', [$request->start_date, $request->end_date]);
-    } elseif ($request->has('date')) {
-        $query->whereDate('date', $request->date);
-    }
-
-    $items = $query->paginate($perPage);
-
-    return $this->paginated($items, 'Weekly updates for student(s) fetched');
-}
 
 }
