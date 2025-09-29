@@ -26,7 +26,7 @@ class MediaUploadController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'key'   => 'required|string|in:' . implode(',', $this->validKeys),
-            'media' => 'required|file|mimes:jpeg,png,jpg,mp4,mov,avi,mp3,wav,ogg,pptx,xlsx,csv,doc,docx,pdf|max:10240',
+            'media' => 'required|file|mimes:jpeg,png,jpg,mp4,mov,avi,mp3,wav,ogg,pptx,xlsx,csv,doc,docx,pdf,cvs,ppt,xls|max:10240',
 
         ]);
 
