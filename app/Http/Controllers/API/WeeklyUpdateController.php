@@ -97,7 +97,7 @@ class WeeklyUpdateController extends Controller
             'media' => $request->media ?? [],
         ]);
 
-        return $this->success($update->load(['teacher.user','gurukal']), 'Weekly update created', 201);
+        return $this->success($update->load(['teacher','gurukal']), 'Weekly update created', 201);
     }
 
 
