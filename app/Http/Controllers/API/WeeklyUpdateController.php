@@ -21,6 +21,7 @@ class WeeklyUpdateController extends Controller
         $query = WeeklyUpdate::with(['teacher', 'gurukal'])
             ->orderBy('date', 'desc');
         $user = $request->user();
+        // dd($user);
 
         if ($user->role === 'teacher' && $user->teacher) {
             $query->where('teacher_id', $user->teacher->user_id); 
@@ -105,12 +106,12 @@ class WeeklyUpdateController extends Controller
     {
         $user = $request->user();
         $update = WeeklyUpdate::find($id);
-
         if (! $update) {
             return $this->error('Update not found', 404);
         }
+        // dd($user->id, $update->teacher->user_id);
 
-        $isOwner = $update->teacher && $update->teacher->user_id === $user->id;
+        $isOwner = $update->teacher && $update->teacher_id === $user->id;
         if (! $isOwner && ! $request->user()->hasRole('admin')) {
             return $this->error('Unauthorized to update this entry', 403);
         }
@@ -218,12 +219,12 @@ class WeeklyUpdateController extends Controller
         // dd('s');
         $user = $request->user();
         $perPage = $request->get('per_page', 10);
-
         $studentId = $request->get('student_id');
-
+        
         if ($studentId) {
             // ek student ki updates
             $student = $user->students()->find($studentId);
+            // dd($user->students());
 
             if (! $student) {
                 return $this->error('Student not found for this user', 404);
@@ -231,7 +232,6 @@ class WeeklyUpdateController extends Controller
 
             $gurukalIds = [$student->gurukal_id];
         } else {
-            // parent ke sabhi students
             $students = $user->students;
 
             if ($students->isEmpty()) {
@@ -241,7 +241,7 @@ class WeeklyUpdateController extends Controller
             $gurukalIds = $students->pluck('gurukal_id')->unique()->toArray();
         }
 
-        $query = WeeklyUpdate::with(['teacher.user', 'gurukal'])
+        $query = WeeklyUpdate::with(['teacher', 'gurukal'])
             ->whereIn('gurukal_id', $gurukalIds)
             ->orderBy('date', 'desc');
 
