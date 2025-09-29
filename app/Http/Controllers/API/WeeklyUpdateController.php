@@ -91,7 +91,7 @@ if ($user->role === 'teacher' && $user->teacher) {
         $gurukalId = $teacher->gurukal_id;
 
         $update = WeeklyUpdate::create([
-            'teacher_id' => $teacher->id,
+            'teacher_id' => $teacher->user_id,
             'gurukal_id' => $gurukalId,
             'date' => $request->date,
             'title' => $request->title,
