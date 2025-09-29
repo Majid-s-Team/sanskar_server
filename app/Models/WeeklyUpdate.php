@@ -26,9 +26,8 @@ class WeeklyUpdate extends Model
 
     public function teacher()
     {
-        return $this->belongsTo(User::class,'id');
+        return $this->belongsTo(User::class, 'teacher_id', 'id');
     }
-
     public function gurukal()
     {
         return $this->belongsTo(Gurukal::class);
