@@ -18,19 +18,17 @@ class WeeklyUpdateController extends Controller
     {
         $perPage = $request->get('per_page', 10);
 
-        $query = WeeklyUpdate::with(['teacher.user', 'gurukal'])
+        $query = WeeklyUpdate::with(['teacher', 'gurukal'])
             ->orderBy('date', 'desc');
+        $user = $request->user();
 
-       $user = $request->user();
-
-if ($user->role === 'teacher' && $user->teacher) {
-    $query->where('teacher_id', $user->teacher->id);
-}
-
-
-        if ($request->has('teacher_id') && $user->role !== 'teacher') {
-            $query->where('teacher_id', $request->teacher_id);
+        if ($user->role === 'teacher' && $user->teacher) {
+            $query->where('teacher_id', $user->teacher->user_id); 
         }
+
+        // if ($request->has('teacher_id') && $user->role !== 'teacher') {
+        //     $query->where('teacher_id', $request->teacher_id);
+        // }
 
         if ($request->has('gurukal_id')) {
             $query->where('gurukal_id', $request->gurukal_id);
@@ -38,12 +36,12 @@ if ($user->role === 'teacher' && $user->teacher) {
 
         if ($request->has('start_date') && $request->has('end_date')) {
             $query->whereBetween('date', [$request->start_date, $request->end_date]);
-        } elseif ($request->has('date')) {
-            $query->whereDate('date', $request->date);
-        }
+        } 
+        // elseif ($request->has('date')) {
+        //     $query->whereDate('date', $request->date);
+        // }
 
         $updates = $query->paginate($perPage);
-
         return $this->paginated($updates, 'Weekly updates fetched successfully');
     }
 
