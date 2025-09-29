@@ -136,7 +136,7 @@ class WeeklyUpdateController extends Controller
             'media' => $request->has('media') ? $request->media : $update->media,
         ]);
 
-        return $this->success($update->load(['teacher.user','gurukal']), 'Weekly update updated');
+        return $this->success($update->load(['teacher','gurukal']), 'Weekly update updated');
     }
 
     // Soft delete
