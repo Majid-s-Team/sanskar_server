@@ -14,14 +14,19 @@ class WeeklyUpdateController extends Controller
 {
     use ApiResponse;
 
-    // List updates (filter by teacher_id or gurukal_id optionally). Pagination supported.
     public function index(Request $request)
     {
         $perPage = $request->get('per_page', 10);
 
-        $query = WeeklyUpdate::with(['teacher.user', 'gurukal'])->orderBy('date', 'desc');
+        $query = WeeklyUpdate::with(['teacher.user', 'gurukal'])
+            ->orderBy('date', 'desc');
 
-        if ($request->has('teacher_id')) {
+        $user = $request->user();
+        if ($user->role === 'teacher') {
+            $query->where('teacher_id', $user->teacher->id);
+        }
+
+        if ($request->has('teacher_id') && $user->role !== 'teacher') {
             $query->where('teacher_id', $request->teacher_id);
         }
 
@@ -39,6 +44,7 @@ class WeeklyUpdateController extends Controller
 
         return $this->paginated($updates, 'Weekly updates fetched successfully');
     }
+
 
     // Show single update
     public function show($id)
