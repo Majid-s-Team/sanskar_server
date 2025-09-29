@@ -43,6 +43,7 @@ Route::post('/create-stripe-session', [PaymentController::class, 'createStripeSe
 Route::get('all-profiles', [ProfileController::class, 'viewAll']);
 Route::post('getDataPdf',[ProfileController::class,'getUserPdf']);
 Route::post('/upload-media', [MediaUploadController::class, 'upload']);
+Route::post('/test', [MediaUploadController::class, 'testPdf']);
  Route::prefix('activity')->group(function () {
     Route::get('/', [ActivityController::class, 'index']);
     Route::post('/', [ActivityController::class, 'store']);

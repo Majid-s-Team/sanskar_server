@@ -20,3 +20,5 @@ ALTER TABLE `sanskar`.`weekly_updates`
 ---------------------------------------------
 
 
+ALTER TABLE `students` CHANGE `is_new_student` `is_new_student` TINYINT(1) NULL DEFAULT NULL;
+-- ea-php82 /usr/local/bin/composer require maatwebsite/excel
