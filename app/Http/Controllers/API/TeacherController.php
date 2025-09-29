@@ -26,17 +26,19 @@ class TeacherController extends Controller
 
         $query = Teacher::with(['user', 'gurukal']);
 
-        if ($request->has('user_id')) {
-            $query->where('user_id', $request->user_id);
+        if ($request->filled('user_id')) {
+        $query->where('user_id', (int) $request->user_id);
         }
 
-        if ($request->has('full_name')) {
+
+        if ($request->filled('full_name')) {
             $query->where('full_name', 'like', '%' . $request->full_name . '%');
         }
 
-        if ($request->has('gurukal_id')) {
-            $query->where('gurukal_id', $request->gurukal_id);
+        if ($request->filled('gurukal_id')) {
+        $query->where('gurukal_id', (int) $request->gurukal_id);
         }
+// dd($query->toSql(), $query->getBindings());
 
         $teachers = $query->get();
 

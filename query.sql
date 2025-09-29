@@ -32,3 +32,5 @@ ADD CONSTRAINT `weekly_updates_user_id_foreign`
 FOREIGN KEY (`teacher_id`) REFERENCES `users`(`id`) 
 ON DELETE CASCADE 
 ON UPDATE CASCADE;
+
+ALTER TABLE `students` CHANGE `is_payment_done` `is_payment_done` TINYINT(1) NULL DEFAULT NULL;
