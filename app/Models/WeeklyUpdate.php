@@ -4,7 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-
+use App\Models\User;
+use App\Models\Gurukal;
 class WeeklyUpdate extends Model
 {
     use SoftDeletes;
@@ -26,9 +27,8 @@ class WeeklyUpdate extends Model
 
     public function teacher()
     {
-        return $this->belongsTo(Teacher::class);
+        return $this->belongsTo(User::class, 'teacher_id', 'id');
     }
-
     public function gurukal()
     {
         return $this->belongsTo(Gurukal::class);

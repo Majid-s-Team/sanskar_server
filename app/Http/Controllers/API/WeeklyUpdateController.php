@@ -14,16 +14,21 @@ class WeeklyUpdateController extends Controller
 {
     use ApiResponse;
 
-    // List updates (filter by teacher_id or gurukal_id optionally). Pagination supported.
     public function index(Request $request)
     {
         $perPage = $request->get('per_page', 10);
 
-        $query = WeeklyUpdate::with(['teacher.user', 'gurukal'])->orderBy('date', 'desc');
+        $query = WeeklyUpdate::with(['teacher', 'gurukal'])
+            ->orderBy('date', 'desc');
+        $user = $request->user();
 
-        if ($request->has('teacher_id')) {
-            $query->where('teacher_id', $request->teacher_id);
+        if ($user->role === 'teacher' && $user->teacher) {
+            $query->where('teacher_id', $user->teacher->user_id); 
         }
+
+        // if ($request->has('teacher_id') && $user->role !== 'teacher') {
+        //     $query->where('teacher_id', $request->teacher_id);
+        // }
 
         if ($request->has('gurukal_id')) {
             $query->where('gurukal_id', $request->gurukal_id);
@@ -31,14 +36,15 @@ class WeeklyUpdateController extends Controller
 
         if ($request->has('start_date') && $request->has('end_date')) {
             $query->whereBetween('date', [$request->start_date, $request->end_date]);
-        } elseif ($request->has('date')) {
-            $query->whereDate('date', $request->date);
-        }
+        } 
+        // elseif ($request->has('date')) {
+        //     $query->whereDate('date', $request->date);
+        // }
 
         $updates = $query->paginate($perPage);
-
         return $this->paginated($updates, 'Weekly updates fetched successfully');
     }
+
 
     // Show single update
     public function show($id)
@@ -57,7 +63,6 @@ class WeeklyUpdateController extends Controller
     {
         $user = $request->user();
 
-        // ensure user is a teacher
         $teacher = Teacher::where('user_id', $user->id)->first();
         if (! $teacher) {
             return $this->error('Only teachers can create weekly updates', 403);
@@ -68,20 +73,23 @@ class WeeklyUpdateController extends Controller
             'title' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'media' => 'nullable|array',
-            'media.*.type' => 'nullable|string|in:image,video,pdf,link,other',
+            'media.*.type' => 'nullable|string|in:image,doc,video,pdf,excel,powerpoint,mp3,link,other',
             'media.*.url' => 'nullable|url',
             'media.*.name' => 'nullable|string',
+            'media.*.file' => 'nullable|file|max:102400', 
+
+
         ]);
 
         if ($validator->fails()) {
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        // Copy gurukal from teacher to ensure consistency
+
         $gurukalId = $teacher->gurukal_id;
 
         $update = WeeklyUpdate::create([
-            'teacher_id' => $teacher->id,
+            'teacher_id' => $teacher->user_id,
             'gurukal_id' => $gurukalId,
             'date' => $request->date,
             'title' => $request->title,
@@ -89,7 +97,7 @@ class WeeklyUpdateController extends Controller
             'media' => $request->media ?? [],
         ]);
 
-        return $this->success($update->load(['teacher.user','gurukal']), 'Weekly update created', 201);
+        return $this->success($update->load(['teacher','gurukal']), 'Weekly update created', 201);
     }
 
 
@@ -102,7 +110,6 @@ class WeeklyUpdateController extends Controller
             return $this->error('Update not found', 404);
         }
 
-        // allow if current user is the teacher who created it OR admin
         $isOwner = $update->teacher && $update->teacher->user_id === $user->id;
         if (! $isOwner && ! $request->user()->hasRole('admin')) {
             return $this->error('Unauthorized to update this entry', 403);
@@ -129,7 +136,7 @@ class WeeklyUpdateController extends Controller
             'media' => $request->has('media') ? $request->media : $update->media,
         ]);
 
-        return $this->success($update->load(['teacher.user','gurukal']), 'Weekly update updated');
+        return $this->success($update->load(['teacher','gurukal']), 'Weekly update updated');
     }
 
     // Soft delete
@@ -207,46 +214,46 @@ class WeeklyUpdateController extends Controller
      * returns updates for the student's gurukal (class)
      */
    public function forStudents(Request $request)
-{
-    // dd('s');
-    $user = $request->user();
-    $perPage = $request->get('per_page', 10);
+    {
+        // dd('s');
+        $user = $request->user();
+        $perPage = $request->get('per_page', 10);
 
-    $studentId = $request->get('student_id');
+        $studentId = $request->get('student_id');
 
-    if ($studentId) {
-        // ek student ki updates
-        $student = $user->students()->find($studentId);
+        if ($studentId) {
+            // ek student ki updates
+            $student = $user->students()->find($studentId);
 
-        if (! $student) {
-            return $this->error('Student not found for this user', 404);
+            if (! $student) {
+                return $this->error('Student not found for this user', 404);
+            }
+
+            $gurukalIds = [$student->gurukal_id];
+        } else {
+            // parent ke sabhi students
+            $students = $user->students;
+
+            if ($students->isEmpty()) {
+                return $this->error('No students found for this user', 404);
+            }
+
+            $gurukalIds = $students->pluck('gurukal_id')->unique()->toArray();
         }
 
-        $gurukalIds = [$student->gurukal_id];
-    } else {
-        // parent ke sabhi students
-        $students = $user->students;
+        $query = WeeklyUpdate::with(['teacher.user', 'gurukal'])
+            ->whereIn('gurukal_id', $gurukalIds)
+            ->orderBy('date', 'desc');
 
-        if ($students->isEmpty()) {
-            return $this->error('No students found for this user', 404);
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $query->whereBetween('date', [$request->start_date, $request->end_date]);
+        } elseif ($request->has('date')) {
+            $query->whereDate('date', $request->date);
         }
 
-        $gurukalIds = $students->pluck('gurukal_id')->unique()->toArray();
+        $items = $query->paginate($perPage);
+
+        return $this->paginated($items, 'Weekly updates for student(s) fetched');
     }
-
-    $query = WeeklyUpdate::with(['teacher.user', 'gurukal'])
-        ->whereIn('gurukal_id', $gurukalIds)
-        ->orderBy('date', 'desc');
-
-    if ($request->has('start_date') && $request->has('end_date')) {
-        $query->whereBetween('date', [$request->start_date, $request->end_date]);
-    } elseif ($request->has('date')) {
-        $query->whereDate('date', $request->date);
-    }
-
-    $items = $query->paginate($perPage);
-
-    return $this->paginated($items, 'Weekly updates for student(s) fetched');
-}
 
 }

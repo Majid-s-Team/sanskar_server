@@ -14,20 +14,27 @@ class AnnouncementController extends Controller
     use ApiResponse;
 
     // List announcements
-    public function index(Request $request)
-    {
-        $perPage = $request->get('per_page', 10);
+  public function index(Request $request)
+{
+    $perPage = $request->get('per_page', 10);
+    $user = $request->user();
 
-        $query = Announcement::with('gurukal')->latest();
+    $query = Announcement::with('gurukal')->latest();
 
-        if ($request->has('gurukal_id')) {
-            $query->where('gurukal_id', $request->gurukal_id);
-        }
-
-        $announcements = $query->paginate($perPage);
-
-        return $this->paginated($announcements, 'Announcements fetched successfully');
+    // Auth-wise: sirf wahi announcements dikhenge jo user ne upload kiye
+    if ($user->role === 'teacher') {
+        $query->where('teacher_id', $user->id);
     }
+
+    if ($request->has('gurukal_id')) {
+        $query->where('gurukal_id', $request->gurukal_id);
+    }
+
+    $announcements = $query->paginate($perPage);
+
+    return $this->paginated($announcements, 'Announcements fetched successfully');
+}
+
 
     // Show single
     public function show($id)
@@ -68,6 +75,7 @@ class AnnouncementController extends Controller
             'title' => $request->title,
             'description' => $request->description,
             'gurukal_id' => $teacher->gurukal_id,
+            'teacher_id' => $user->id,
         ]);
 
         return $this->success($announcement->load('gurukal'), 'Announcement created successfully', 201);
@@ -86,9 +94,12 @@ class AnnouncementController extends Controller
         $teacher = Teacher::where('user_id', $user->id)->first();
         $isOwner = $teacher && $teacher->gurukal_id == $announcement->gurukal_id;
 
-        if (! $isOwner && ! $user->hasRole('admin')) {
-            return $this->error('Unauthorized to update this announcement', 403);
-        }
+    // Only owner teacher or admin
+    $isOwner = $user->role === 'teacher' && $announcement->teacher_id === $user->id;
+
+    if (! $isOwner && ! $user->hasRole('admin')) {
+        return $this->error('Unauthorized', 403);
+    }
 
         $validator = Validator::make($request->all(), [
             'title' => 'sometimes|required|string|max:255',

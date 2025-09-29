@@ -13,10 +13,16 @@ class Announcement extends Model
         'title',
         'description',
         'gurukal_id',
+        'teacher_id',
     ];
 
     public function gurukal()
     {
         return $this->belongsTo(Gurukal::class);
     }
+    public function teacher()
+{
+    return $this->belongsTo(User::class, 'teacher_id', 'id'); 
+}
+
 }

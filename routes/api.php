@@ -17,6 +17,7 @@ use App\Http\Controllers\API\PaymentController;
 use App\Http\Controllers\API\TeacherController;
 use App\Http\Controllers\API\WeeklyUpdateController;
 use App\Http\Controllers\API\AnnouncementController;
+use App\Http\Controllers\WebAPI\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,6 +29,8 @@ use App\Http\Controllers\API\AnnouncementController;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+Route::get('/payments/check-all', [PaymentController::class, 'checkAllUsersPayments']);
+Route::get('/users/without-roles', [RoleController::class, 'getUsersWithoutRoles']);
 
 Route::post('signup', [AuthController::class, 'signup']);
 Route::post('login', [AuthController::class, 'login']);
@@ -39,6 +42,7 @@ Route::post('/stripe/webhook', [PaymentController::class, 'handleStripeWebhook']
 Route::post('/create-stripe-session', [PaymentController::class, 'createStripeSession']);
 Route::get('all-profiles', [ProfileController::class, 'viewAll']);
 Route::post('getDataPdf',[ProfileController::class,'getUserPdf']);
+Route::post('test', [ProfileController::class, 'testPdf']);
 Route::post('/upload-media', [MediaUploadController::class, 'upload']);
  Route::prefix('activity')->group(function () {
     Route::get('/', [ActivityController::class, 'index']);
@@ -122,6 +126,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/announcements/{id}', [AnnouncementController::class, 'destroy']);
         Route::get('/annoucement-student', [AnnouncementController::class, 'forStudents']);
 
+    Route::get('/users', [UserController::class, 'index']);
+    // Route::post('/users', [UserController::class, 'store']);
+    // Route::get('/users/{id}', [UserController::class, 'show']);
+    // Route::put('/users/{id}', [UserController::class, 'update']);
+    // Route::delete('/users/{id}', [UserController::class, 'destroy']);
+    Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
 
     // Route::delete('roles/{id}', [RoleController::class, 'destroy']);
 

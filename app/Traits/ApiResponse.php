@@ -36,5 +36,15 @@ trait ApiResponse
             ],
         ]);
     }
+    public function successWithPagination($data = [], $pagination = [], $message = 'Success', $code = 200)
+    {
+        return response()->json([
+            'status'     => true,
+            'message'    => $message,
+            'data'       => $data,
+            'pagination' => $pagination,
+        ], $code);
+    }
+
     
 }

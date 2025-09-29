@@ -11,3 +11,24 @@ ALTER TABLE `sanskar`.`students`
 
 ALTER TABLE `sanskar`.`weekly_updates`   
 	ADD COLUMN `name` VARCHAR(255) NULL AFTER `media`;
+
+
+
+---------------------------------------------
+-- 2024-06-17 12:00:00
+-- Querys
+---------------------------------------------
+
+
+ALTER TABLE `students` CHANGE `is_new_student` `is_new_student` TINYINT(1) NULL DEFAULT NULL;
+-- ea-php82 /usr/local/bin/composer require maatwebsite/excel
+
+ALTER TABLE `weekly_updates` 
+DROP FOREIGN KEY `weekly_updates_teacher_id_foreign`;
+
+
+ALTER TABLE `weekly_updates`
+ADD CONSTRAINT `weekly_updates_user_id_foreign`
+FOREIGN KEY (`teacher_id`) REFERENCES `users`(`id`) 
+ON DELETE CASCADE 
+ON UPDATE CASCADE;

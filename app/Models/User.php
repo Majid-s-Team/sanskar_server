@@ -34,6 +34,7 @@ class User extends Authenticatable
         'is_otp_verified',
         'profile_image',
         'role',
+        'is_payment_done',
 
 
     ];
@@ -59,5 +60,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(Payment::class);
     }
+    public function teacher()
+{
+    return $this->hasOne(Teacher::class);
+}
+
 
 }

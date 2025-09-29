@@ -13,16 +13,40 @@ class StudentController extends Controller
 {
     use ApiResponse;
 
-    public function index(Request $request)
+  public function index(Request $request)
 {
+    $request->validate([
+        'per_page' => 'sometimes|integer|min:1|max:100',
+        'user_id' => 'sometimes|integer|exists:users,id',
+        'name' => 'sometimes|string',
+        'gurukal_id' => 'sometimes|integer|exists:gurukals,id',
+    ]);
+
     $perPage = $request->get('per_page', 10); 
 
-    $students = Student::with(['user', 'teeshirtSize', 'gurukal', 'schoolGrade'])
-        ->latest()
-        ->paginate($perPage);
+    $query = Student::with(['user', 'teeshirtSize', 'gurukal', 'schoolGrade']);
+
+    if ($request->has('user_id')) {
+        $query->where('user_id', $request->user_id);
+    }
+
+    if ($request->has('name')) {
+        $name = $request->name;
+        $query->where(function ($q) use ($name) {
+            $q->where('first_name', 'like', "%$name%")
+              ->orWhere('last_name', 'like', "%$name%");
+        });
+    }
+
+    if ($request->has('gurukal_id')) {
+        $query->where('gurukal_id', $request->gurukal_id);
+    }
+
+    $students = $query->latest()->paginate($perPage);
 
     return $this->paginated($students, 'Students fetched successfully');
 }
+
 
     public function show($id)
     {
