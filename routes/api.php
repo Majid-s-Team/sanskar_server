@@ -18,6 +18,8 @@ use App\Http\Controllers\API\TeacherController;
 use App\Http\Controllers\API\WeeklyUpdateController;
 use App\Http\Controllers\API\AnnouncementController;
 use App\Http\Controllers\WebAPI\UserController;
+use App\Http\Controllers\API\HouseController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -136,6 +138,22 @@ Route::middleware('auth:sanctum')->group(function () {
     // Route::put('/users/{id}', [UserController::class, 'update']);
     // Route::delete('/users/{id}', [UserController::class, 'destroy']);
     Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
+    
+    Route::prefix('houses')->group(function () {
+    Route::get('/', [HouseController::class, 'index']);
+    Route::post('/', [HouseController::class, 'store']);
+    Route::get('/{id}', [HouseController::class, 'show']);
+    Route::put('/{id}', [HouseController::class, 'update']);
+    Route::delete('/{id}', [HouseController::class, 'destroy']);
+    Route::patch('/{id}/status', [HouseController::class, 'changeStatus']);
+
+    // Custom
+    Route::post('/assign/{studentId}', [HouseController::class, 'assignHouse']);
+    Route::get('/{houseId}/students', [HouseController::class, 'getStudentsByHouse']);
+
+
+});
+
 
     // Route::delete('roles/{id}', [RoleController::class, 'destroy']);
 

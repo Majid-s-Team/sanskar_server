@@ -24,7 +24,7 @@ class StudentController extends Controller
 
     $perPage = $request->get('per_page', 10); 
 
-    $query = Student::with(['user', 'teeshirtSize', 'gurukal', 'schoolGrade']);
+    $query = Student::with(['user', 'teeshirtSize', 'gurukal', 'schoolGrade','house']);
 
     if ($request->has('user_id')) {
         $query->where('user_id', $request->user_id);
@@ -50,7 +50,7 @@ class StudentController extends Controller
 
     public function show($id)
     {
-        $student = Student::with(['user', 'teeshirtSize', 'gurukal', 'schoolGrade'])->find($id);
+        $student = Student::with(['user', 'teeshirtSize', 'gurukal', 'schoolGrade','house'])->find($id);
 
         if (!$student) {
             return $this->error('Student not found', 404);
