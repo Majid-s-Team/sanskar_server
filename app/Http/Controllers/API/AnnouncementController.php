@@ -14,14 +14,13 @@ class AnnouncementController extends Controller
     use ApiResponse;
 
     // List announcements
-  public function index(Request $request)
+public function index(Request $request)
 {
     $perPage = $request->get('per_page', 10);
     $user = $request->user();
 
     $query = Announcement::with('gurukal')->latest();
 
-    // Auth-wise: sirf wahi announcements dikhenge jo user ne upload kiye
     if ($user->role === 'teacher') {
         $query->where('teacher_id', $user->id);
     }
@@ -30,9 +29,21 @@ class AnnouncementController extends Controller
         $query->where('gurukal_id', $request->gurukal_id);
     }
 
-    $announcements = $query->paginate($perPage);
+    $totalAnnouncements = $query->count();
+    $items = $query->paginate($perPage);
 
-    return $this->paginated($announcements, 'Announcements fetched successfully');
+    return response()->json([
+        'status'  => true,
+        'message' => 'Announcements fetched successfully',
+        'data'    => $items->items(),
+        'total_announcements' => $totalAnnouncements,
+        'pagination' => [
+            'count'        => $items->total(),
+            'pageCount'    => $items->lastPage(),
+            'perPage'      => $items->perPage(),
+            'currentPage'  => $items->currentPage(),
+        ],
+    ]);
 }
 
 
@@ -136,46 +147,56 @@ class AnnouncementController extends Controller
 
         return $this->success(null, 'Announcement deleted successfully (soft)');
     }
-    public function forStudents(Request $request)
-    {
-        $user = $request->user();
-        $perPage = $request->get('per_page', 10);
+public function forStudents(Request $request)
+{
+    $user = $request->user();
+    $perPage = $request->get('per_page', 10);
 
-        $studentId = $request->get('student_id');
+    $studentId = $request->get('student_id');
 
-        if ($studentId) {
-            // ek specific student ki announcements
-            $student = $user->students()->find($studentId);
+    if ($studentId) {
+        $student = $user->students()->find($studentId);
 
-            if (! $student) {
-                return $this->error('Student not found for this user', 404);
-            }
-
-            $gurukalIds = [$student->gurukal_id];
-        } else {
-            // parent ke sabhi students
-            $students = $user->students;
-
-            if ($students->isEmpty()) {
-                return $this->error('No students found for this user', 404);
-            }
-
-            $gurukalIds = $students->pluck('gurukal_id')->unique()->toArray();
+        if (! $student) {
+            return $this->error('Student not found for this user', 404);
         }
 
-        $query = Announcement::with(['gurukal'])
-            ->whereIn('gurukal_id', $gurukalIds)
-            ->orderBy('created_at', 'desc');
+        $gurukalIds = [$student->gurukal_id];
+    } else {
+        $students = $user->students;
 
-        if ($request->has('start_date') && $request->has('end_date')) {
-            $query->whereBetween('created_at', [$request->start_date, $request->end_date]);
-        } elseif ($request->has('date')) {
-            $query->whereDate('created_at', $request->date);
+        if ($students->isEmpty()) {
+            return $this->error('No students found for this user', 404);
         }
 
-        $items = $query->paginate($perPage);
-
-        return $this->paginated($items, 'Announcements for student(s) fetched');
+        $gurukalIds = $students->pluck('gurukal_id')->unique()->toArray();
     }
+
+    $query = Announcement::with(['gurukal'])
+        ->whereIn('gurukal_id', $gurukalIds)
+        ->orderBy('created_at', 'desc');
+
+    if ($request->has('start_date') && $request->has('end_date')) {
+        $query->whereBetween('created_at', [$request->start_date, $request->end_date]);
+    } elseif ($request->has('date')) {
+        $query->whereDate('created_at', $request->date);
+    }
+
+    $totalAnnouncements = $query->count();
+    $items = $query->paginate($perPage);
+
+    return response()->json([
+        'status'  => true,
+        'message' => 'Announcements for student(s) fetched',
+        'data'    => $items->items(),
+        'total_announcements' => $totalAnnouncements,
+        'pagination' => [
+            'count'        => $items->total(),
+            'pageCount'    => $items->lastPage(),
+            'perPage'      => $items->perPage(),
+            'currentPage'  => $items->currentPage(),
+        ],
+    ]);
+}
 
 }
