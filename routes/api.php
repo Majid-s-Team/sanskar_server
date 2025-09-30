@@ -87,9 +87,12 @@ Route::prefix('student')->group(function () {
     Route::put('/{id}', [StudentController::class, 'update']);
     Route::delete('/{id}', [StudentController::class, 'destroy']);
     Route::patch('/{id}/status', [StudentController::class, 'changeStatus']);
+
 });
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('for-student', [WeeklyUpdateController::class, 'forStudents']);
+        Route::post('student/{id}/status', [StudentController::class, 'updateStudentStatus']);
+
 });
 Route::middleware('auth:sanctum')->prefix('weekly-updates')->group(function () {
 
