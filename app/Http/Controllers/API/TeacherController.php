@@ -358,6 +358,39 @@ public function getStudents(Request $request, $teacherId)
     
         return $this->success($responseData, 'Attendances fetched successfully');
     }
+   public function changeTeacherPassword(Request $request, $teacherId)
+    {
+        if (!$request->user()->hasRole('admin')) {
+            return $this->error('Unauthorized. Only admin can change teacher password.', 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'updated_password' => 'required|string|min:6',
+            'confirm_password' => 'required|string|same:updated_password',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('Validation failed', 422, $validator->errors());
+        }
+
+        $teacher = Teacher::where('id', $teacherId)->first();
+
+        if (!$teacher) {
+            return $this->error("Teacher with ID {$teacherId} not found", 404);
+        }
+
+        $user = User::find($teacher->user_id);
+
+        if (!$user) {
+            return $this->error("User linked with Teacher ID {$teacherId} not found", 404);
+        }
+
+        $user->password = Hash::make($request->updated_password);
+        $user->save();
+
+        return $this->success([], 'Teacher password updated successfully');
+    }
+
 
 
 
