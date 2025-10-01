@@ -18,6 +18,7 @@ class HouseController extends Controller
         return $this->success(House::all(), 'Houses fetched successfully');
     }
 
+
     public function store(Request $request)
     {
         if (!Auth::user() || Auth::user()->role !== 'admin') {

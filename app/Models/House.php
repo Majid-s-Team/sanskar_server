@@ -5,12 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+
 
 class House extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $fillable = ['name', 'is_active', 'house_image'];
+        protected $appends = ['house_image_url'];
+
 
     public function students()
     {
@@ -18,7 +23,10 @@ class House extends Model
     }
     public function getHouseImageUrlAttribute()
     {
-        return $this->house_image ? asset('storage/' . $this->house_image) : null;
+        if ($this->house_image) {
+            return Storage::disk('public')->url($this->house_image);
+        }
+        return null;
     }
 
 }
