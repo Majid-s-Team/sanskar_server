@@ -312,11 +312,16 @@ class ProfileController extends Controller
 
         $users = $query->orderBy('id', 'asc')->paginate($perPage);
 
+        if ($users->isEmpty()) {
+            return $this->error('No matching users found', 404);
+        }
+
         return $this->success([
             'users' => $users->items(),
             'pagination' => $this->paginate($users),
-        ], 'Users Fetched Successfully');
+        ], 'Users fetched successfully');
     }
+
 
     public function testPdf()
     {

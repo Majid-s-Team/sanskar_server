@@ -33,6 +33,7 @@ use App\Http\Controllers\API\HouseController;
 */
 Route::get('/payments/check-all', [PaymentController::class, 'checkAllUsersPayments']);
 Route::get('/users/without-roles', [RoleController::class, 'getUsersWithoutRoles']);
+Route::get('/test-email', [PasswordController::class, 'testEmail']);
 
 Route::post('signup', [AuthController::class, 'signup']);
 Route::post('login', [AuthController::class, 'login']);

@@ -23,9 +23,20 @@ class HouseController extends Controller
         if (!Auth::user() || Auth::user()->role !== 'admin') {
             return $this->error('Only admin can create houses', 403);
         }
+        // $validated = $request->validate([
+        //     'name' => 'required|string|unique:houses|max:255',
+        // ]);
         $validated = $request->validate([
             'name' => 'required|string|unique:houses|max:255',
+            'house_image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
+
+        if ($request->hasFile('house_image')) {
+            $path = $request->file('house_image')->store('houses', 'public');
+            $validated['house_image'] = $path;
+        }
+
+
 
         $house = House::create($validated + ['is_active' => true]);
 
@@ -57,7 +68,13 @@ class HouseController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:houses,name,' . $id,
+            'house_image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
+
+        if ($request->hasFile('house_image')) {
+            $path = $request->file('house_image')->store('houses', 'public');
+            $validated['house_image'] = $path;
+        }
 
         $house->update($validated);
 
