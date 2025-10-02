@@ -154,7 +154,7 @@ class StudentController extends Controller
         $user = User::find($id);
 
         if (!$user) {
-            return $this->error('User not found', null, 404);
+            return $this->error('User not found', 404);
         }
 
         $students = $user->students()->with([
