@@ -22,21 +22,17 @@ class PaymentController extends Controller
 public function createStripeSession(Request $request)
 {
     $request->validate([
-        'user_id' => 'required|exists:users,id',
-        'student_id' => 'required|exists:students,id',
-        'amount' => 'required|numeric|min:0.5',
-        'currency' => 'required|string|size:3',
+        'user_id'    => 'required|exists:users,id',
+        'student_id' => 'required', 
+        'amount'     => 'required|numeric|min:0.5',
+        'currency'   => 'required|string|size:3',
     ]);
 
     $user = User::findOrFail($request->user_id);
-    $student = Student::findOrFail($request->student_id);
-    if ($student->user_id !== $user->id) {
-        return response()->json([
-            'status' => false,
-            'error' => 'Student does not belong to this user.'
-        ], 400);
-    }
 
+    $studentIds = is_array($request->student_id) 
+        ? $request->student_id 
+        : [$request->student_id];
 
     $unitAmount = (int) round($request->amount * 100);
 
@@ -46,53 +42,100 @@ public function createStripeSession(Request $request)
         'payment_method_types' => ['card'],
         'line_items' => [[
             'price_data' => [
-                'currency' => strtolower($request->currency),
+                'currency'     => strtolower($request->currency),
                 'product_data' => ['name' => 'Registration Fee'],
-                'unit_amount' => $unitAmount, // in cents
+                'unit_amount'  => $unitAmount,
             ],
             'quantity' => 1,
         ]],
-        'mode' => 'payment',
-
+        'mode'        => 'payment',
         'success_url' => url('/payment/success') . '?session_id={CHECKOUT_SESSION_ID}',
-        // 'success_url' => 'https://sanskar-ruddy.vercel.app/login',
-        // 'cancel_url'  => url('/payment/cancel'),
-        // 'cancel_url'  => url('/payment/cancel'),
         'cancel_url'  => 'https://sanskaracademy-dev.org/',
-        'metadata' => ['user_id' => $user->id,'student_id' => $student->id],
+        'metadata'    => [
+            'user_id'     => $user->id,
+            'student_ids' => implode(',', $studentIds),
+        ],
     ]);
 
+    foreach ($studentIds as $sid) {
+        $student = Student::findOrFail($sid);
+        if ($student->user_id !== $user->id) {
+            return response()->json([
+                'status' => false,
+                'error'  => "Student $sid does not belong to this user."
+            ], 400);
+        }
 
-    Payment::create([
-        'user_id' => $user->id,
-        'student_id' => $student->id,
-        'payment_id' => $session->id,
-        'amount' => $unitAmount,
-        'currency' => strtolower($request->currency),
-        'payment_method' => 'stripe',
-        'status' => 'pending',
-    ]);
+        Payment::create([
+            'user_id'       => $user->id,
+            'student_id'    => $student->id,
+            'payment_id'    => $session->id,
+            'amount'        => $unitAmount,
+            'currency'      => strtolower($request->currency),
+            'payment_method'=> 'stripe',
+            'status'        => 'pending',
+        ]);
+    }
 
     return response()->json(['url' => $session->url]);
 }
+
 public function success(Request $request)
-    {
-        $sessionId = $request->query('session_id');
+{
+    $sessionId = $request->query('session_id');
 
-        if (!$sessionId) {
-            abort(404, 'Session ID missing.');
-        }
-
-Stripe::setApiKey(config('services.stripe.secret'));
-$session = Session::retrieve($sessionId);
-
-        // Optional: verify payment status
-        if ($session->payment_status === 'paid') {
-            return view('success', ['session' => $session]);
-        }
-
-        return abort(404, 'Payment not found or not paid.');
+    if (!$sessionId) {
+        abort(404, 'Session ID missing.');
     }
+
+    Stripe::setApiKey(config('services.stripe.secret'));
+    $session = Session::retrieve($sessionId);
+
+    if ($session->payment_status === 'paid') {
+        $payments = Payment::where('payment_id', $session->id)->get();
+
+        foreach ($payments as $payment) {
+            $payment->update([
+                'status'   => 'completed',
+                'currency' => $session->currency ?? $payment->currency,
+            ]);
+
+            $user = User::find($payment->user_id);
+            if ($user) {
+                $user->update(['is_payment_done' => 1]);
+            }
+
+            $student = Student::find($payment->student_id);
+            if ($student) {
+                $student->update(['is_payment_done' => 1]);
+            }
+        }
+
+        return view('success', ['session' => $session]);
+    }
+
+    return abort(404, 'Payment not found or not paid.');
+}
+
+
+// public function success(Request $request)
+//     {
+//         $sessionId = $request->query('session_id');
+
+//         if (!$sessionId) {
+//             abort(404, 'Session ID missing.');
+//         }
+
+// Stripe::setApiKey(config('services.stripe.secret'));
+// $session = Session::retrieve($sessionId);
+
+//         // Optional: verify payment status
+//         if ($session->payment_status === 'paid') {
+//             return view('success', ['session' => $session]);
+//         }
+
+//         return abort(404, 'Payment not found or not paid.');
+//     }
 
     public function cancel()
     {

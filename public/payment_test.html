@@ -5,10 +5,18 @@
 </head>
 <body>
   <h2>Stripe Payment Test</h2>
-  <label>User ID:</label> <input type="number" id="user_id"><br>
-  <label>Student ID:</label> <input type="number" id="student_id"><br>
-  <label>Amount:</label> <input type="number" id="amount"><br>
-  <label>Currency:</label> <input type="text" id="currency" value="usd"><br>
+  <label>User ID:</label> 
+  <input type="number" id="user_id"><br>
+
+  <label>Student IDs (comma separated):</label> 
+  <input type="text" id="student_id" placeholder="e.g. 12 or 12,13,14"><br>
+
+  <label>Amount:</label> 
+  <input type="number" id="amount"><br>
+
+  <label>Currency:</label> 
+  <input type="text" id="currency" value="usd"><br>
+
   <button id="payNow">Pay Now</button>
 
   <script src="https://js.stripe.com/v3/"></script>
@@ -16,19 +24,25 @@
     const stripe = Stripe("pk_test_51RtTevD49IzWQBTFZst7l276muggOXPQd2hatN26G5AAWLm9s2t6FOzD8ZqxtrbFxHI1mXgQ0e5O0eGkXueeuo9t00CY3C0L6J");
 
     document.getElementById("payNow").addEventListener("click", async () => {
+      let studentInput = document.getElementById("student_id").value.trim();
+
+      // convert to array if multiple ids
+      let studentIds = studentInput.includes(",") 
+        ? studentInput.split(",").map(id => id.trim()) 
+        : studentInput;
+
       const response = await fetch("https://sanskar.retrocubedev.com/api/create-stripe-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           user_id: document.getElementById("user_id").value,
-          student_id: document.getElementById("student_id").value,
+          student_id: studentIds,  // can be number or array
           amount: document.getElementById("amount").value,
           currency: document.getElementById("currency").value
         })
       });
 
       const data = await response.json();
-
       if (data.url) {
         window.location.href = data.url;
       } else {
