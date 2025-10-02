@@ -160,7 +160,8 @@ class StudentController extends Controller
         $students = $user->students()->with([
             'teeshirtSize',
             'gurukal',
-            'schoolGrade'
+            'schoolGrade',
+            'house'
         ])->get();
 
         return $this->success($students, 'Student list fetched successfully');
