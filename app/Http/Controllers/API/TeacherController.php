@@ -56,7 +56,7 @@ class TeacherController extends Controller
             'full_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,primary_email',
             'password' => 'required|string|min:6',
-            'phone_number' => 'nullable|string',
+            'phone_number' => 'nullable|string|unique:users,phone_number',
             'gurukal_id' => 'required|exists:gurukals,id',
             'profile_picture' => 'nullable|string',
         ]);
@@ -117,7 +117,7 @@ class TeacherController extends Controller
             'full_name' => 'sometimes|string|max:255',
             'email' => 'sometimes|email|unique:users,primary_email,' . $user->id,
             'password' => 'nullable|string|min:6',
-            'phone_number' => 'nullable|string',
+            'phone_number' => 'nullable|string|unique:users,phone_number,' . $user->id,
             'gurukal_id' => 'nullable|exists:gurukals,id',
             'profile_picture' => 'nullable|string',
 
