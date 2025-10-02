@@ -166,6 +166,29 @@ class StudentController extends Controller
 
         return $this->success($students, 'Student list fetched successfully');
     }
+    public function updateStudentStatus(Request $request, $id)
+    {
+        $request->validate([
+            'is_new_student' => 'required|boolean',
+        ]);
+
+        $student = Student::where('id', $id)
+            ->where('user_id', auth()->id())
+            ->first();
+
+        if (!$student) {
+            return $this->error('Student not found or not associated with this user', 404);
+        }
+
+        if (!is_null($student->is_new_student)) {
+            return $this->error('Student is already marked as Yes or No', 422);
+        }
+
+        $student->is_new_student = $request->is_new_student;
+        $student->save();
+
+        return $this->success($student, 'Student status marked successfully');
+    }
 
 
 }
