@@ -6,6 +6,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\Student;
 use App\Models\Payment;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
@@ -22,11 +23,19 @@ public function createStripeSession(Request $request)
 {
     $request->validate([
         'user_id' => 'required|exists:users,id',
+        'student_id' => 'required|exists:students,id',
         'amount' => 'required|numeric|min:0.5',
         'currency' => 'required|string|size:3',
     ]);
 
     $user = User::findOrFail($request->user_id);
+    $student = Student::findOrFail($request->student_id);
+    if ($student->user_id !== $user->id) {
+        return response()->json([
+            'status' => false,
+            'error' => 'Student does not belong to this user.'
+        ], 400);
+    }
 
 
     $unitAmount = (int) round($request->amount * 100);
@@ -50,12 +59,13 @@ public function createStripeSession(Request $request)
         // 'cancel_url'  => url('/payment/cancel'),
         // 'cancel_url'  => url('/payment/cancel'),
         'cancel_url'  => 'https://sanskaracademy-dev.org/',
-        'metadata' => ['user_id' => $user->id],
+        'metadata' => ['user_id' => $user->id,'student_id' => $student->id],
     ]);
 
 
     Payment::create([
         'user_id' => $user->id,
+        'student_id' => $student->id,
         'payment_id' => $session->id,
         'amount' => $unitAmount,
         'currency' => strtolower($request->currency),
