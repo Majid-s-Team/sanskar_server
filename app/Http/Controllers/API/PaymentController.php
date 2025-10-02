@@ -163,6 +163,10 @@ $session = Session::retrieve($sessionId);
         if ($user) {
             $user->update(['is_payment_done' => 1]);
         }
+         $student = Student::find($payment->student_id);
+        if ($student) {
+            $student->update(['is_payment_done' => 1]);
+        }
     } else {
         \Log::warning('Payment DB record not found for session', ['session_id' => $session->id]);
     }
