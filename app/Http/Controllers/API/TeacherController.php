@@ -269,7 +269,7 @@ class TeacherController extends Controller
     public function markAttendance(Request $request, $id)
     {
         $request->validate([
-            'attendance_date' => 'required|date',
+            // 'attendance_date' => 'required|date',
             'attendance' => 'required|array',
             'attendance.*.student_id' => 'required|exists:students,id',
             'attendance.*.status' => 'required|in:not_recorded,present,excused_absence,unexcused_absence',
