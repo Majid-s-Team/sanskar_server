@@ -8,6 +8,7 @@ class Payment extends Model
 {
     protected $fillable = [
         'user_id',
+        'student_id',
         'payment_id',
         'transaction_id',
         'amount',
@@ -31,4 +32,9 @@ class Payment extends Model
     {
         return $this->belongsTo(User::class);
     }
+    public function student()
+    {
+        return $this->belongsTo(Student::class);
+    }
+
 }

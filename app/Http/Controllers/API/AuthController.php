@@ -12,6 +12,10 @@ use Illuminate\Support\Facades\Hash;
 use App\Traits\ApiResponse;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Teacher;
+use App\Models\WeeklyUpdate;
+use App\Models\Announcement;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Redirect;
 class AuthController extends Controller
 {
     use ApiResponse;
@@ -147,6 +151,7 @@ class AuthController extends Controller
             'user'  => $user->load($relations),
             'roles' => $user->getRoleNames(),
             'token' => $token,
+            'stats' => $this->getStatsForUser($user), 
         ];
 
         if ($user->hasRole('teacher')) {
@@ -165,4 +170,44 @@ class AuthController extends Controller
         $request->user()->tokens()->delete();
         return $this->success([], 'Logged out successfully');
     }
+
+
+    private function getStatsForUser($user)
+    {
+        if ($user->hasRole('admin')) {
+            return [
+                'total_weekly_updates' => WeeklyUpdate::count(),
+                'total_announcements'  => Announcement::count(),
+                'total_multimedia'     => WeeklyUpdate::whereNotNull('media')->count(),
+                'total_students'       => Student::where('is_payment_done', 1)->whereNull('deleted_at')->count(),
+            ];
+        }
+
+        if ($user->hasRole('teacher')) {
+            return [
+                'total_weekly_updates' => WeeklyUpdate::where('teacher_id', $user->id)->count(),
+                'total_announcements'  => Announcement::where('teacher_id', $user->id)->count(),
+                'total_multimedia'     => WeeklyUpdate::where('teacher_id', $user->id)->whereNotNull('media')->count(),
+                'total_students'       => Student::where('gurukal_id', optional($user->teacher)->gurukal_id)
+                                                            ->where('is_payment_done', 1)
+                                                            ->count(),
+            ];
+        }
+
+        if ($user->hasRole('user')) {
+            $studentIds = $user->students()->pluck('id');
+
+            return [
+                'total_weekly_updates' => WeeklyUpdate::whereIn('gurukal_id', $user->students->pluck('gurukal_id'))->count(),
+                'total_announcements'  => Announcement::whereIn('gurukal_id', $user->students->pluck('gurukal_id'))->count(),
+                'total_multimedia'     => WeeklyUpdate::whereIn('gurukal_id', $user->students->pluck('gurukal_id'))
+                                                                ->whereNotNull('media')
+                                                                ->count(),
+                'total_students'       => $user->students()->where('is_payment_done', 1)->count(),
+            ];
+        }
+
+        return [];
+    }
+
 }

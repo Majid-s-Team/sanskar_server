@@ -14,37 +14,41 @@ class WeeklyUpdateController extends Controller
 {
     use ApiResponse;
 
-    public function index(Request $request)
-    {
-        $perPage = $request->get('per_page', 10);
+   public function index(Request $request)
+{
+    $perPage = $request->get('per_page', 10);
 
-        $query = WeeklyUpdate::with(['teacher', 'gurukal'])
-            ->orderBy('date', 'desc');
-        $user = $request->user();
-        // dd($user);
+    $query = WeeklyUpdate::with(['teacher', 'gurukal'])
+        ->orderBy('id', 'desc');
+    $user = $request->user();
 
-        if ($user->role === 'teacher' && $user->teacher) {
-            $query->where('teacher_id', $user->teacher->user_id); 
-        }
-
-        // if ($request->has('teacher_id') && $user->role !== 'teacher') {
-        //     $query->where('teacher_id', $request->teacher_id);
-        // }
-
-        if ($request->has('gurukal_id')) {
-            $query->where('gurukal_id', $request->gurukal_id);
-        }
-
-        if ($request->has('start_date') && $request->has('end_date')) {
-            $query->whereBetween('date', [$request->start_date, $request->end_date]);
-        } 
-        // elseif ($request->has('date')) {
-        //     $query->whereDate('date', $request->date);
-        // }
-
-        $updates = $query->paginate($perPage);
-        return $this->paginated($updates, 'Weekly updates fetched successfully');
+    if ($user->role === 'teacher' && $user->teacher) {
+        $query->where('teacher_id', $user->teacher->user_id); 
     }
+
+    if ($request->has('gurukal_id')) {
+        $query->where('gurukal_id', $request->gurukal_id);
+    }
+
+    if ($request->has('start_date') && $request->has('end_date')) {
+        $query->whereBetween('date', [$request->start_date, $request->end_date]);
+    }
+
+    $totalUpdates = $query->count();
+    $updates = $query->paginate($perPage);
+
+    return $this->successWithPagination(
+        $updates->items(),
+        [
+            'count'        => $updates->total(),
+            'pageCount'    => $updates->lastPage(),
+            'perPage'      => $updates->perPage(),
+            'currentPage'  => $updates->currentPage(),
+            'total_updates'=> $totalUpdates
+        ],
+        'Weekly updates fetched successfully'
+    );
+}
 
 
     // Show single update
@@ -74,7 +78,7 @@ class WeeklyUpdateController extends Controller
             'title' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'media' => 'nullable|array',
-            'media.*.type' => 'nullable|string|in:image,doc,video,pdf,excel,powerpoint,mp3,link,other',
+            'media.*.type' => 'nullable|string|in:image,doc,video,pdf,excel,powerpoint,mp3,link,other,docx,mp4,jpeg,png,jpg,mp4,mov,avi,mp3,wav,ogg,pptx,xlsx,csv,doc,docx,pdf,cvs,ppt,xls',
             'media.*.url' => 'nullable|url',
             'media.*.name' => 'nullable|string',
             'media.*.file' => 'nullable|file|max:102400', 
@@ -121,7 +125,9 @@ class WeeklyUpdateController extends Controller
             'title' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'media' => 'nullable|array',
-            'media.*.type' => 'nullable|string|in:image,video,pdf,link,other',
+            // 'media.*.type' => 'nullable|string|in:image,video,pdf,link,other',
+            'media.*.type' => 'nullable|string|in:image,doc,video,pdf,excel,powerpoint,mp3,link,other,docx',
+
             'media.*.url' => 'nullable|url',
             'media.*.name' => 'nullable|string',
         ]);
@@ -215,45 +221,54 @@ class WeeklyUpdateController extends Controller
      * returns updates for the student's gurukal (class)
      */
    public function forStudents(Request $request)
-    {
-        // dd('s');
-        $user = $request->user();
-        $perPage = $request->get('per_page', 10);
-        $studentId = $request->get('student_id');
-        
-        if ($studentId) {
-            // ek student ki updates
-            $student = $user->students()->find($studentId);
-            // dd($user->students());
+{
+    $user = $request->user();
+    $perPage = $request->get('per_page', 10);
+    $studentId = $request->get('student_id');
+    
+    if ($studentId) {
+        $student = $user->students()->find($studentId);
 
-            if (! $student) {
-                return $this->error('Student not found for this user', 404);
-            }
-
-            $gurukalIds = [$student->gurukal_id];
-        } else {
-            $students = $user->students;
-
-            if ($students->isEmpty()) {
-                return $this->error('No students found for this user', 404);
-            }
-
-            $gurukalIds = $students->pluck('gurukal_id')->unique()->toArray();
+        if (! $student) {
+            return $this->error('Student not found for this user', 404);
         }
 
-        $query = WeeklyUpdate::with(['teacher', 'gurukal'])
-            ->whereIn('gurukal_id', $gurukalIds)
-            ->orderBy('date', 'desc');
+        $gurukalIds = [$student->gurukal_id];
+    } else {
+        $students = $user->students;
 
-        if ($request->has('start_date') && $request->has('end_date')) {
-            $query->whereBetween('date', [$request->start_date, $request->end_date]);
-        } elseif ($request->has('date')) {
-            $query->whereDate('date', $request->date);
+        if ($students->isEmpty()) {
+            return $this->error('No students found for this user', 404);
         }
 
-        $items = $query->paginate($perPage);
-
-        return $this->paginated($items, 'Weekly updates for student(s) fetched');
+        $gurukalIds = $students->pluck('gurukal_id')->unique()->toArray();
     }
+
+    $query = WeeklyUpdate::with(['teacher', 'gurukal'])
+        ->whereIn('gurukal_id', $gurukalIds)
+        ->orderBy('date', 'desc');
+
+    if ($request->has('start_date') && $request->has('end_date')) {
+        $query->whereBetween('date', [$request->start_date, $request->end_date]);
+    } elseif ($request->has('date')) {
+        $query->whereDate('date', $request->date);
+    }
+
+    $totalUpdates = $query->count();
+    $items = $query->paginate($perPage);
+
+    return $this->successWithPagination(
+        $items->items(),
+        [
+            'count'        => $items->total(),
+            'pageCount'    => $items->lastPage(),
+            'perPage'      => $items->perPage(),
+            'currentPage'  => $items->currentPage(),
+            'total_updates'=> $totalUpdates
+        ],
+        'Weekly updates for student(s) fetched'
+    );
+}
+
 
 }

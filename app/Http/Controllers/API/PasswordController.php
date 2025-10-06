@@ -9,11 +9,40 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
-
+use App\Mail\OtpMail;
 class PasswordController extends Controller
 {
     use ApiResponse;
 
+    // public function forgotPassword(Request $request)
+    // {
+    //     $request->validate([
+    //         'primary_email' => 'required|email'
+    //     ]);
+
+    //     $user = User::where('primary_email', $request->primary_email)->first();
+
+    //     if (!$user) {
+    //         return $this->error('User not found', 404);
+    //     }
+
+    //     $otp = rand(100000, 999999);
+    //     $user->update([
+    //         'otp' => $otp,
+    //         'otp_expires_at' => Carbon::now()->addMinutes(10),
+    //         'is_otp_verified' => false
+    //     ]);
+
+    //     // Uncomment in production
+    //     // Mail::raw("Your OTP is: $otp", function ($message) use ($user) {
+    //     //     $message->to($user->primary_email)->subject('Password Reset OTP');
+    //     // });
+
+    //     return $this->success([
+    //         'message' => 'OTP sent to your email',
+    //         'otp' => $otp 
+    //     ]);
+    // }
     public function forgotPassword(Request $request)
     {
         $request->validate([
@@ -25,6 +54,9 @@ class PasswordController extends Controller
         if (!$user) {
             return $this->error('User not found', 404);
         }
+         if (!$user->is_payment_done) {
+            return $this->error('You have not done the payment', 403);
+        }
 
         $otp = rand(100000, 999999);
         $user->update([
@@ -33,16 +65,21 @@ class PasswordController extends Controller
             'is_otp_verified' => false
         ]);
 
-        // Uncomment in production
-        // Mail::raw("Your OTP is: $otp", function ($message) use ($user) {
-        //     $message->to($user->primary_email)->subject('Password Reset OTP');
-        // });
+        Mail::to($user->primary_email)->send(new OtpMail($otp, $user));
 
-        return $this->success([
-            'message' => 'OTP sent to your email',
-            'otp' => $otp 
-        ]);
+        return $this->success([], 'OTP sent to your email');
     }
+
+    public function testEmail()
+    {
+        $fakeUser = (object)['name' => 'Test User', 'primary_email' => 'hasanraza132002@gmail.com'];
+        $otp = rand(100000, 999999);
+
+        Mail::to("hasanraza132002@gmail.com")->send(new OtpMail($otp, $fakeUser));
+
+        return "Test email sent with OTP: $otp";
+    }
+
 
     public function verifyOtp(Request $request)
     {

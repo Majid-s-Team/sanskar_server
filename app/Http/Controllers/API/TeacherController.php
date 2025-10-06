@@ -27,7 +27,7 @@ class TeacherController extends Controller
         $query = Teacher::with(['user', 'gurukal']);
 
         if ($request->filled('user_id')) {
-        $query->where('user_id', (int) $request->user_id);
+            $query->where('user_id', (int) $request->user_id);
         }
 
 
@@ -36,13 +36,17 @@ class TeacherController extends Controller
         }
 
         if ($request->filled('gurukal_id')) {
-        $query->where('gurukal_id', (int) $request->gurukal_id);
+            $query->where('gurukal_id', (int) $request->gurukal_id);
         }
-// dd($query->toSql(), $query->getBindings());
+        // dd($query->toSql(), $query->getBindings());
+        $perPage = $request->get('per_page', 10);
+        $teachers = $query->paginate($perPage);
 
-        $teachers = $query->get();
 
-        return $this->success($teachers, 'Teachers fetched successfully');
+        // $teachers = $query->get();
+
+        return $this->paginated($teachers, 'Teachers fetched successfully');
+
     }
 
 
@@ -56,7 +60,7 @@ class TeacherController extends Controller
             'full_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,primary_email',
             'password' => 'required|string|min:6',
-            'phone_number' => 'nullable|string',
+            'phone_number'    => 'nullable|string|unique:users,mobile_number',
             'gurukal_id' => 'required|exists:gurukals,id',
             'profile_picture' => 'nullable|string',
         ]);
@@ -117,7 +121,7 @@ class TeacherController extends Controller
             'full_name' => 'sometimes|string|max:255',
             'email' => 'sometimes|email|unique:users,primary_email,' . $user->id,
             'password' => 'nullable|string|min:6',
-            'phone_number' => 'nullable|string',
+            'phone_number' => 'nullable|string|unique:users,mobile_number,' . $user->id,
             'gurukal_id' => 'nullable|exists:gurukals,id',
             'profile_picture' => 'nullable|string',
 
@@ -171,87 +175,93 @@ class TeacherController extends Controller
         ]);
     }
 
-public function getStudents(Request $request, $teacherId)
-{
-    try {
-        $teacher = Teacher::find($teacherId);
+    public function getStudents(Request $request, $teacherId)
+    {
+        try {
+            $teacher = Teacher::find($teacherId);
+            // $teacher = Teacher::where('user_id', $teacherId)->first();
 
-        if (! $teacher) {
-            return $this->error('Teacher not found', 404);
-        }
+            // dd($teacherId);
 
-        $request->validate([
-            'per_page'   => 'sometimes|integer|min:1|max:100',
-            'date'       => 'sometimes|date',
-            'user_id'    => 'sometimes|integer|exists:users,id',
-            'name'       => 'sometimes|string',
-            'gurukal_id' => 'sometimes|integer|exists:gurukals,id',
-        ]);
+            if (! $teacher) {
+                return $this->error('Teacher not found', 404);
+            }
 
-        $perPage    = $request->get('per_page', 10);
-        $targetDate = $request->get('date', now()->toDateString());
+            $request->validate([
+                'per_page'   => 'sometimes|integer|min:1|max:100',
+                'date'       => 'sometimes|date',
+                'user_id'    => 'sometimes|integer|exists:users,id',
+                'name'       => 'sometimes|string',
+                'gurukal_id' => 'sometimes|integer|exists:gurukals,id',
+            ]);
 
-        $query = Student::with('user')
-            ->where('gurukal_id', $teacher->gurukal_id);
+            $perPage    = $request->get('per_page', 10);
+            $targetDate = $request->get('date', now()->toDateString());
 
-        if ($request->has('user_id')) {
-            $query->where('user_id', $request->user_id);
-        }
+            $query = Student::with(['user', 'house'])
+                ->where('gurukal_id', $teacher->gurukal_id);
 
-        if ($request->has('name')) {
-            $name = $request->name;
-            $query->where(function ($q) use ($name) {
-                $q->where('first_name', 'like', "%$name%")
-                  ->orWhere('last_name', 'like', "%$name%");
+            if (auth()->user()->hasRole('teacher')) {
+                $query->where('is_payment_done', 1);
+            }
+            // dd(auth()->user()->hasRole('teacher'));
+
+            if ($request->has('user_id')) {
+                $query->where('user_id', $request->user_id);
+            }
+
+            if ($request->has('name')) {
+                $name = $request->name;
+                $query->where(function ($q) use ($name) {
+                    $q->where('first_name', 'like', "%$name%")
+                        ->orWhere('last_name', 'like', "%$name%");
+                });
+            }
+
+            if ($request->has('gurukal_id')) {
+                $query->where('gurukal_id', $request->gurukal_id);
+            }
+
+            $students = $query->paginate($perPage);
+
+            $studentsData = $students->map(function ($student) use ($teacher, $targetDate) {
+                $attendance = Attendance::where('teacher_id', $teacher->id)
+                    ->where('student_id', $student->id)
+                    ->whereDate('attendance_date', $targetDate)
+                    ->first();
+
+                return [
+                    'student' => $student,
+                    'attendance' => [
+                        'date'                 => $targetDate,
+                        'status'               => $attendance->status ?? 'not_recorded',
+                        'participation_points' => $attendance->participation_points ?? 0,
+                        'homework_points'      => $attendance->homework_points ?? 0,
+                    ]
+                ];
             });
+
+            return $this->successWithPagination(
+                [
+                    'teacher'        => $teacher->full_name,
+                    'date'           => $targetDate,
+                    'students_count' => $students->total(),
+                    'students'       => $studentsData,
+                ],
+                [
+                    'count'        => $students->total(),
+                    'pageCount'    => $students->lastPage(),
+                    'perPage'      => $students->perPage(),
+                    'currentPage'  => $students->currentPage(),
+                ],
+                'Students fetched successfully'
+            );
+        } catch (\Exception $e) {
+            return $this->error('Something went wrong', 500, [
+                'error' => $e->getMessage()
+            ]);
         }
-
-        if ($request->has('gurukal_id')) {
-            $query->where('gurukal_id', $request->gurukal_id);
-        }
-
-        $students = $query->paginate($perPage);
-
-        $studentsData = $students->map(function ($student) use ($teacher, $targetDate) {
-            $attendance = Attendance::where('teacher_id', $teacher->id)
-                ->where('student_id', $student->id)
-                ->whereDate('attendance_date', $targetDate)
-                ->first();
-
-            return [
-                'student' => $student,
-                'attendance' => [
-                    'date'                 => $targetDate,
-                    'status'               => $attendance->status ?? 'not_recorded',
-                    'participation_points' => $attendance->participation_points ?? 0,
-                    'homework_points'      => $attendance->homework_points ?? 0,
-                ]
-            ];
-        });
-
-    return $this->successWithPagination(
-        [
-            'teacher'        => $teacher->full_name,
-            'date'           => $targetDate,
-            'students_count' => $students->total(),
-            'students'       => $studentsData,
-        ],
-        [
-            'count'        => $students->total(),
-            'pageCount'    => $students->lastPage(),
-            'perPage'      => $students->perPage(),
-            'currentPage'  => $students->currentPage(),
-        ],
-        'Students fetched successfully'
-    );
-
-
-    } catch (\Exception $e) {
-        return $this->error('Something went wrong', 500, [
-            'error' => $e->getMessage()
-        ]);
     }
-}
 
 
 
@@ -265,6 +275,11 @@ public function getStudents(Request $request, $teacherId)
             'attendance.*.status' => 'required|in:not_recorded,present,excused_absence,unexcused_absence',
             'attendance.*.participation_points' => 'nullable|integer|min:0|max:3',
             'attendance.*.homework_points' => 'nullable|integer|min:0|max:3',
+        ],
+    [
+
+            'attendance_date.required' => 'Please select date first.',
+            'attendance_date.date' => 'Please select date first.',
         ]);
 
 
@@ -304,37 +319,43 @@ public function getStudents(Request $request, $teacherId)
             'records' => $results,
         ]);
     }
-  
+
     public function getAttendances(Request $request, $id)
     {
         $teacher = Teacher::with('gurukal')->find($id);
-    
+
         if (!$teacher) {
             return $this->error('Teacher not found', 404);
         }
-    
-        $students = Student::with('user')->where('gurukal_id', $teacher->gurukal_id)->get();
-    
+
+        // $students = Student::with('user')->where('gurukal_id', $teacher->gurukal_id)->get();
+        $students = Student::with('user')
+            ->where('gurukal_id', $teacher->gurukal_id)
+            ->when(auth()->user()->hasRole('teacher'), function ($q) {
+                $q->where('is_payment_done', 1);
+            })
+            ->get();
+
         $defaultDate = $request->date ?? now()->toDateString();
-    
+
         $records = $students->map(function ($student) use ($teacher, $defaultDate) {
             $attendance = Attendance::where('teacher_id', $teacher->id)
                 ->where('student_id', $student->id)
                 ->whereDate('attendance_date', $defaultDate)
                 ->first();
-    
+
             return [
-                'student'              => $student, 
+                'student'              => $student,
                 'status'               => $attendance->status ?? 'not_recorded',
                 'date'                 => $defaultDate,
                 'participation_points' => $attendance->participation_points ?? 0,
                 'homework_points'      => $attendance->homework_points ?? 0,
             ];
         });
-    
+
         $recorded    = $records->filter(fn($r) => $r['status'] !== 'not_recorded')->values();
         $notRecorded = $records->filter(fn($r) => $r['status'] === 'not_recorded')->values();
-    
+
         $counts = [
             'total_students'    => $students->count(),
             'present'           => $recorded->where('status', 'present')->count(),
@@ -342,7 +363,7 @@ public function getStudents(Request $request, $teacherId)
             'unexcused_absence' => $recorded->where('status', 'unexcused_absence')->count(),
             'not_recorded'      => $notRecorded->count(),
         ];
-    
+
         $responseData = [
             'teacher_id' => $teacher->id,
             'filters'    => [
@@ -355,10 +376,39 @@ public function getStudents(Request $request, $teacherId)
                 'not_recorded' => $notRecorded,
             ],
         ];
-    
+
         return $this->success($responseData, 'Attendances fetched successfully');
     }
+    public function changeTeacherPassword(Request $request, $teacherId)
+    {
+        if (!$request->user()->hasRole('admin')) {
+            return $this->error('Unauthorized. Only admin can change teacher password.', 403);
+        }
 
+        $validator = Validator::make($request->all(), [
+            'updated_password' => 'required|string|min:6',
+            'confirm_password' => 'required|string|same:updated_password',
+        ]);
 
+        if ($validator->fails()) {
+            return $this->error('Validation failed', 422, $validator->errors());
+        }
 
+        $teacher = Teacher::where('id', $teacherId)->first();
+
+        if (!$teacher) {
+            return $this->error("Teacher with ID {$teacherId} not found", 404);
+        }
+
+        $user = User::find($teacher->user_id);
+
+        if (!$user) {
+            return $this->error("User linked with Teacher ID {$teacherId} not found", 404);
+        }
+
+        $user->password = Hash::make($request->updated_password);
+        $user->save();
+
+        return $this->success([], 'Teacher password updated successfully');
+    }
 }

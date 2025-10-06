@@ -18,6 +18,8 @@ use App\Http\Controllers\API\TeacherController;
 use App\Http\Controllers\API\WeeklyUpdateController;
 use App\Http\Controllers\API\AnnouncementController;
 use App\Http\Controllers\WebAPI\UserController;
+use App\Http\Controllers\API\HouseController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -31,6 +33,7 @@ use App\Http\Controllers\WebAPI\UserController;
 */
 Route::get('/payments/check-all', [PaymentController::class, 'checkAllUsersPayments']);
 Route::get('/users/without-roles', [RoleController::class, 'getUsersWithoutRoles']);
+Route::get('/test-email', [PasswordController::class, 'testEmail']);
 
 Route::post('signup', [AuthController::class, 'signup']);
 Route::post('login', [AuthController::class, 'login']);
@@ -87,9 +90,12 @@ Route::prefix('student')->group(function () {
     Route::put('/{id}', [StudentController::class, 'update']);
     Route::delete('/{id}', [StudentController::class, 'destroy']);
     Route::patch('/{id}/status', [StudentController::class, 'changeStatus']);
+
 });
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('for-student', [WeeklyUpdateController::class, 'forStudents']);
+        Route::post('student/{id}/status', [StudentController::class, 'updateStudentStatus']);
+
 });
 Route::middleware('auth:sanctum')->prefix('weekly-updates')->group(function () {
 
@@ -118,7 +124,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('teacher/{id}/attendance', [TeacherController::class, 'markAttendance']);
     Route::get('attendance/statuses', [TeacherController::class, 'getStatuses']);
     Route::get('teacher/{id}/attendances', [TeacherController::class, 'getAttendances']);
-   
+    Route::put('teachers/{teacherId}/change-password', [TeacherController::class, 'changeTeacherPassword']);
+
       Route::get('/announcements', [AnnouncementController::class, 'index']);
     Route::get('/announcements/{id}', [AnnouncementController::class, 'show']);
     Route::post('/announcements', [AnnouncementController::class, 'store']);
@@ -132,6 +139,22 @@ Route::middleware('auth:sanctum')->group(function () {
     // Route::put('/users/{id}', [UserController::class, 'update']);
     // Route::delete('/users/{id}', [UserController::class, 'destroy']);
     Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
+    
+    Route::prefix('houses')->group(function () {
+    Route::get('/', [HouseController::class, 'index']);
+    Route::post('/', [HouseController::class, 'store']);
+    Route::get('/{id}', [HouseController::class, 'show']);
+    Route::put('/{id}', [HouseController::class, 'update']);
+    Route::delete('/{id}', [HouseController::class, 'destroy']);
+    Route::patch('/{id}/status', [HouseController::class, 'changeStatus']);
+
+    // Custom
+    Route::post('/assign/{studentId}', [HouseController::class, 'assignHouse']);
+    Route::get('/{houseId}/students', [HouseController::class, 'getStudentsByHouse']);
+
+
+});
+
 
     // Route::delete('roles/{id}', [RoleController::class, 'destroy']);
 
