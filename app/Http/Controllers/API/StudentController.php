@@ -149,23 +149,100 @@ class StudentController extends Controller
 
         return $this->success($student, 'Student status updated');
     }
-    public function getMyStudents($id)
+    // public function getMyStudents($id)
+    // {
+    //     $user = User::find($id);
+
+    //     if (!$user) {
+    //         return $this->error('User not found', 404, []);
+    //     }
+
+    //     $students = $user->students()->with([
+    //         'teeshirtSize',
+    //         'gurukal',
+    //         'schoolGrade',
+    //         'house'
+    //     ])->get();
+
+    //     return $this->success($students, 'Student list fetched successfully');
+    // }
+    public function getMyStudents(Request $request, $id)
     {
         $user = User::find($id);
 
         if (!$user) {
-            return $this->error('User not found', 404, []);
+            return $this->error('User not found', 404);
         }
 
-        $students = $user->students()->with([
-            'teeshirtSize',
-            'gurukal',
-            'schoolGrade',
-            'house'
-        ])->get();
+        $studentId = $request->get('student_id');
 
-        return $this->success($students, 'Student list fetched successfully');
+        if (!$studentId) {
+            $students = $user->students()
+                ->with(['teeshirtSize', 'gurukal', 'schoolGrade', 'house'])
+                ->get();
+
+            return $this->success($students, 'Student list fetched successfully');
+        }
+
+        $student = $user->students()
+            ->with([
+                'teeshirtSize',
+                'gurukal',
+                'schoolGrade',
+                'house',
+                'attendances' => function ($query) {
+                    $query->orderBy('attendance_date', 'desc');
+                },
+            ])
+            ->find($studentId);
+
+        if (!$student) {
+            return $this->error('Student not found for this user', 404);
+        }
+
+        $recorded = $student->attendances->filter(fn($a) => !empty($a->status))->map(function ($a) {
+            return [
+                'id' => $a->id,
+                'attendance_date' => $a->attendance_date,
+                'status' => $a->status,
+                'participation_points' => $a->participation_points,
+                'homework_points' => $a->homework_points,
+                'remarks' => $a->remarks,
+                'created_at' => $a->created_at,
+                'updated_at' => $a->updated_at,
+            ];
+        })->values();
+
+        $nonRecorded = $student->attendances->filter(fn($a) => empty($a->status))->map(function ($a) {
+            return [
+                'id' => $a->id,
+                'attendance_date' => $a->attendance_date,
+                'status' => 'not_recorded',
+                'participation_points' => $a->participation_points ?? 0,
+                'homework_points' => $a->homework_points ?? 0,
+                'remarks' => $a->remarks,
+                'created_at' => $a->created_at,
+                'updated_at' => $a->updated_at,
+            ];
+        })->values();
+
+        $data = [
+            'student' => $student, 
+            'attendance_summary' => [
+                'total' => $student->attendances->count(),
+                'recorded_count' => $recorded->count(),
+                'not_recorded_count' => $nonRecorded->count(),
+            ],
+            'attendance_arrays' => [
+                'recorded' => $recorded,
+                'not_recorded' => $nonRecorded,
+            ],
+        ];
+
+        return $this->success($data, 'Student with attendance details fetched successfully');
     }
+
+   
     public function updateStudentStatus(Request $request, $id)
     {
         $request->validate([
