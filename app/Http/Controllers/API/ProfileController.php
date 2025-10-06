@@ -12,21 +12,25 @@ use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\UserReportExport;
 use Illuminate\Pagination\Paginator;
-
+use App\Traits\UserStatsTrait;
 
 
 
 
 class ProfileController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse,UserStatsTrait;
 
     public function view(Request $request)
     {
         $user = $request->user()->load(['students', 'fatherActivities', 'motherActivities']);
-        return $this->success($user, 'Profile fetched');
-    }
+        $stats = $this->getStatsForUser($user); 
 
+        return $this->success([
+            'user'  => $user,
+            'stats' => $stats,
+        ], 'Profile fetched');
+    }
     public function update(Request $request)
     {
         $validator = Validator::make($request->all(), [
