@@ -275,6 +275,10 @@ class TeacherController extends Controller
             'attendance.*.status' => 'required|in:not_recorded,present,excused_absence,unexcused_absence',
             'attendance.*.participation_points' => 'nullable|integer|min:0|max:3',
             'attendance.*.homework_points' => 'nullable|integer|min:0|max:3',
+        ],
+    [
+
+            'attendance_date.required' => 'Please select date first.',
         ]);
 
 
