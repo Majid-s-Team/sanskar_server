@@ -29,6 +29,7 @@ class Student extends Model
         'profile_image',
         'is_payment_done',
         'is_new_student',
+        'house_id',
         // 'address', 'city', 'state', 'zip_code'
     ];
 
