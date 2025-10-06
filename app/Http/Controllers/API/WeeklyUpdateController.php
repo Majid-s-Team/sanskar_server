@@ -78,7 +78,7 @@ class WeeklyUpdateController extends Controller
             'title' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'media' => 'nullable|array',
-            'media.*.type' => 'nullable|string|in:image,doc,video,pdf,excel,powerpoint,mp3,link,other,docx',
+            'media.*.type' => 'nullable|string|in:image,doc,video,pdf,excel,powerpoint,mp3,link,other,docx,mp4,jpeg,png,jpg,mp4,mov,avi,mp3,wav,ogg,pptx,xlsx,csv,doc,docx,pdf,cvs,ppt,xls',
             'media.*.url' => 'nullable|url',
             'media.*.name' => 'nullable|string',
             'media.*.file' => 'nullable|file|max:102400', 
