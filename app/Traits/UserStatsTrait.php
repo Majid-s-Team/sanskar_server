@@ -31,16 +31,20 @@ trait UserStatsTrait
         }
 
         if ($user->hasRole('user')) {
+            $paidStudentGurukalIds = $user->students()
+                ->where('is_payment_done', 1)
+                ->pluck('gurukal_id')
+                ->unique();
+
             return [
-                'total_weekly_updates' => WeeklyUpdate::whereIn('gurukal_id', $user->students->pluck('gurukal_id'))->count(),
-                'total_announcements'  => Announcement::whereIn('gurukal_id', $user->students->pluck('gurukal_id'))->count(),
-                'total_multimedia'     => WeeklyUpdate::whereIn('gurukal_id', $user->students->pluck('gurukal_id'))
+                'total_weekly_updates' => WeeklyUpdate::whereIn('gurukal_id', $paidStudentGurukalIds)->count(),
+                'total_announcements'  => Announcement::whereIn('gurukal_id', $paidStudentGurukalIds)->count(),
+                'total_multimedia'     => WeeklyUpdate::whereIn('gurukal_id', $paidStudentGurukalIds)
                     ->whereNotNull('media')
                     ->count(),
                 'total_students'       => $user->students()->where('is_payment_done', 1)->count(),
             ];
         }
-
         return [];
     }
 }
